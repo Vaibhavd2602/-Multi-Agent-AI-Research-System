@@ -1,261 +1,327 @@
 """
-Multi-Agent AI Research System — Streamlit UI
-------------------------------------------------
-Drop this file in the same folder as pipeline.py, agents.py, tools.py, and .env,
-then run:  streamlit run app.py
+app.py — Streamlit UI for the Multi-Agent Research Pipeline
+
+Drop this file in the SAME folder as pipeline.py, agents.py, tools.py, requirements.txt.
+Run with:  streamlit run app.py
+
+This file does NOT modify pipeline.py or agents.py. It reuses the exact same
+agent/chain builders (build_search_agent, build_reader_agent, writer_chain,
+critic_chain) so the underlying multi-agent logic is identical to what
+pipeline.py does when run from the terminal — the UI just adds a polished,
+step-by-step visual layer on top of it (progress per agent, live status,
+tabs, downloadable report, etc.) instead of only printing to stdout.
 """
 
 import time
-import streamlit as st
-from pipeline import run_research_pipeline
+from datetime import datetime
 
-# ----------------------------------------------------------------------------
+import streamlit as st
+
+from agents import build_reader_agent, build_search_agent, writer_chain, critic_chain
+
+# ──────────────────────────────────────────────────────────────────────────
 # Page config
-# ----------------------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Multi-Agent AI Research System",
-    page_icon="🔬",
+    page_title="Multi-Agent Research System",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ----------------------------------------------------------------------------
-# Custom CSS — modern, clean, professional
-# ----------------------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────────────────
+# Custom CSS — modern / clean / professional
+# ──────────────────────────────────────────────────────────────────────────
 st.markdown(
     """
     <style>
-        /* Overall page */
-        .main {
-            background-color: #0e1117;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        html, body, [class*="css"]  {
+            font-family: 'Inter', sans-serif;
         }
 
-        /* Hero header — simple, clean, no big gradient box */
+        .main {
+            background: radial-gradient(circle at top left, #12141c 0%, #0b0c10 60%);
+        }
+
+        /* Hero header */
         .hero {
-            padding: 0.5rem 0 1.6rem 0;
-            border-bottom: 1px solid #262c36;
-            margin-bottom: 1.8rem;
+            padding: 2.2rem 2.4rem;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 45%, #ec4899 100%);
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.35);
+            margin-bottom: 1.6rem;
         }
         .hero h1 {
-            color: #f5f1ea;
-            font-size: 2rem;
+            color: white;
             font-weight: 800;
-            margin-bottom: 0.5rem;
+            font-size: 2.1rem;
+            margin: 0;
+            letter-spacing: -0.5px;
         }
         .hero p {
-            color: #9ca3af;
-            font-size: 0.95rem;
-            margin: 0;
-        }
-        .hero p .arrow {
-            color: #f97316;
-            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            font-size: 1.02rem;
+            margin-top: 0.4rem;
+            margin-bottom: 0;
         }
 
-        /* Step pill badges */
-        .step-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.35rem 0.9rem;
-            border-radius: 999px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-right: 0.5rem;
-            margin-bottom: 0.4rem;
-        }
-        .badge-search   { background: #1e3a8a33; color: #93c5fd; border: 1px solid #3b82f680; }
-        .badge-reader    { background: #78350f33; color: #fcd34d; border: 1px solid #f59e0b80; }
-        .badge-writer    { background: #14532d33; color: #86efac; border: 1px solid #22c55e80; }
-        .badge-critic    { background: #7f1d1d33; color: #fca5a5; border: 1px solid #ef444480; }
-
-        /* Card container */
+        /* Section cards */
         .card {
-            background: #161b22;
-            border: 1px solid #262c36;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
             border-radius: 16px;
             padding: 1.4rem 1.6rem;
-            margin-bottom: 1.2rem;
+            margin-bottom: 1.1rem;
         }
+
         .card h3 {
             margin-top: 0;
+            font-weight: 700;
+            font-size: 1.05rem;
         }
 
-        /* Report card */
-        .report-card {
-            background: linear-gradient(145deg, #161b22 0%, #1a1f2b 100%);
-            border: 1px solid #2f3542;
-            border-radius: 18px;
-            padding: 1.8rem;
+        .agent-badge {
+            display: inline-block;
+            padding: 0.25rem 0.7rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+            letter-spacing: 0.3px;
         }
+        .badge-search { background: rgba(99,102,241,0.18); color: #a5b4fc; }
+        .badge-reader { background: rgba(236,72,153,0.18); color: #f9a8d4; }
+        .badge-writer { background: rgba(34,197,94,0.18); color: #86efac; }
+        .badge-critic { background: rgba(245,158,11,0.18); color: #fcd34d; }
 
-        /* Footer */
-        .footer {
-            text-align: center;
-            color: #6b7280;
-            font-size: 0.85rem;
-            margin-top: 2.5rem;
-            padding-top: 1rem;
-            border-top: 1px solid #262c36;
-        }
-
-        /* Buttons */
         div.stButton > button {
             border-radius: 10px;
-            font-weight: 600;
-            padding: 0.55rem 1.4rem;
-            background: linear-gradient(90deg, #10b981, #0ea5e9);
-            color: white;
+            font-weight: 700;
+            padding: 0.6rem 1.6rem;
             border: none;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            transition: 0.2s ease;
         }
         div.stButton > button:hover {
-            opacity: 0.92;
-            border: none;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.35);
         }
 
-        /* Field label */
-        .field-label {
-            color: #d1d5db;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 0.4rem;
+        section[data-testid="stSidebar"] {
+            background: #0e0f14;
+            border-right: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .footer-note {
+            text-align: center;
+            color: rgba(255,255,255,0.35);
+            font-size: 0.8rem;
+            margin-top: 2rem;
+        }
+
+        .stTabs [data-baseweb="tab-list"] { gap: 6px; }
+        .stTabs [data-baseweb="tab"] {
+            border-radius: 8px 8px 0 0;
+            padding: 0.5rem 1.1rem;
         }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# ----------------------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────────────────
+# Session state
+# ──────────────────────────────────────────────────────────────────────────
+if "result_state" not in st.session_state:
+    st.session_state.result_state = None
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "running" not in st.session_state:
+    st.session_state.running = False
+
+# ──────────────────────────────────────────────────────────────────────────
 # Sidebar
-# ----------------------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### ⚙️ How it works")
+    st.markdown("## 🧠 Research System")
+    st.caption("Multi-agent pipeline: Search → Read → Write → Critique")
+
+    st.markdown("---")
+    st.markdown("### 🔧 Pipeline Stages")
     st.markdown(
         """
-        This system runs **4 AI agents** in sequence:
-
-        <div class="step-badge badge-search">🔍 Search Agent</div>
-        Finds recent, reliable sources on the web.
-
-        <div class="step-badge badge-reader">📖 Reader Agent</div>
-        Scrapes the most relevant page for deep content.
-
-        <div class="step-badge badge-writer">✍️ Writer Chain</div>
-        Drafts a structured research report.
-
-        <div class="step-badge badge-critic">🧐 Critic Chain</div>
-        Reviews the report for accuracy & clarity.
-        """,
-        unsafe_allow_html=True,
+        1. **Search Agent** — finds recent, reliable sources
+        2. **Reader Agent** — scrapes the best source in depth
+        3. **Writer Chain** — drafts the final report
+        4. **Critic Chain** — reviews & gives feedback
+        """
     )
-    st.markdown("---")
-    st.markdown("### 📌 Notes")
-    st.caption(
-        "Make sure your `.env` file (with GROQ_API_KEY / TAVILY_API_KEY) "
-        "is in the same folder as this app before running."
-    )
-    st.markdown("---")
-    st.caption("Built with LangChain · LangGraph · Streamlit")
 
-# ----------------------------------------------------------------------------
+    st.markdown("---")
+    st.markdown("### 🕘 Recent Topics")
+    if st.session_state.history:
+        for h in reversed(st.session_state.history[-8:]):
+            st.markdown(f"- {h}")
+    else:
+        st.caption("No research run yet.")
+
+    st.markdown("---")
+    st.caption("Built on your existing `pipeline.py` — core agent logic is untouched.")
+
+# ──────────────────────────────────────────────────────────────────────────
 # Hero header
-# ----------------------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────────────────
 st.markdown(
     """
     <div class="hero">
-        <h1>🔍 Multi-Agent AI Research System</h1>
-        <p>Powered by LangChain — Search Agent <span class="arrow">→</span> Reader Agent <span class="arrow">→</span> Writer Chain <span class="arrow">→</span> Critic Chain</p>
+        <h1>🧠 Multi-Agent Research System</h1>
+        <p>Enter a topic and let the Search, Reader, Writer & Critic agents collaborate to produce a reviewed report.</p>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# ----------------------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────────────────
 # Input section
-# ----------------------------------------------------------------------------
-st.markdown('<div class="field-label">Enter a research topic</div>', unsafe_allow_html=True)
-topic = st.text_input(
-    "Research topic",
-    placeholder="e.g. Latest developments in AI regulation 2026",
-    label_visibility="collapsed",
-)
-run_clicked = st.button("🚀 Run Research Pipeline")
+# ──────────────────────────────────────────────────────────────────────────
+input_col, button_col = st.columns([4, 1])
+with input_col:
+    topic = st.text_input(
+        "Research topic",
+        placeholder="e.g. Impact of quantum computing on cryptography",
+        label_visibility="collapsed",
+    )
+with button_col:
+    start_clicked = st.button("🚀 Start Research", use_container_width=True, disabled=st.session_state.running)
 
-# ----------------------------------------------------------------------------
-# Run pipeline
-# ----------------------------------------------------------------------------
-if run_clicked:
-    if not topic.strip():
-        st.warning("Please enter a topic before running the pipeline.")
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────────
+# Pipeline execution — same building blocks as pipeline.run_research_pipeline,
+# just instrumented with live UI status per step.
+# ──────────────────────────────────────────────────────────────────────────
+def run_pipeline_with_ui(topic: str) -> dict:
+    state = {}
+
+    with st.status("Running multi-agent pipeline...", expanded=True) as status:
+
+        # Step 1 — Search agent
+        st.write("🔎 **Search Agent** is looking for recent, reliable sources...")
+        search_agent = build_search_agent()
+        search_result = search_agent.invoke(
+            {"messages": [("user", f"Find recent, reliable and detailed information about: {topic}")]}
+        )
+        state["search_results"] = search_result["messages"][-1].content
+        st.write("✅ Search complete.")
+
+        # Step 2 — Reader agent
+        st.write("📖 **Reader Agent** is scraping the top resource for deeper content...")
+        reader_agent = build_reader_agent()
+        reader_result = reader_agent.invoke(
+            {
+                "messages": [
+                    (
+                        "user",
+                        f"Based on the following search results about '{topic}', "
+                        f"pick the most relevant URL and scrape it for deeper content.\n\n"
+                        f"Search Results:\n{state['search_results'][:800]}",
+                    )
+                ]
+            }
+        )
+        state["scraped_content"] = reader_result["messages"][-1].content
+        st.write("✅ Scraping complete.")
+
+        # Step 3 — Writer chain
+        st.write("✍️ **Writer Chain** is drafting the report...")
+        research_combined = (
+            f"SEARCH RESULTS : \n {state['search_results']} \n\n"
+            f"DETAILED SCRAPED CONTENT : \n {state['scraped_content']}"
+        )
+        state["report"] = writer_chain.invoke({"topic": topic, "research": research_combined})
+        st.write("✅ Draft complete.")
+
+        # Step 4 — Critic chain
+        st.write("🧐 **Critic Chain** is reviewing the report...")
+        state["feedback"] = critic_chain.invoke({"topic": topic, "report": state["report"]})
+        st.write("✅ Review complete.")
+
+        status.update(label="Pipeline finished successfully ✅", state="complete", expanded=False)
+
+    return state
+
+
+if start_clicked:
+    if not topic or not topic.strip():
+        st.warning("Please enter a research topic before starting.")
     else:
-        status_box = st.status("Starting the research pipeline...", expanded=True)
+        st.session_state.running = True
         try:
-            status_box.write("🔍 **Search agent** is gathering recent sources...")
-            time.sleep(0.3)
-
-            result = run_research_pipeline(topic)
-
-            status_box.write("📖 Reader agent scraped the top resource.")
-            status_box.write("✍️ Writer chain drafted the report.")
-            status_box.write("🧐 Critic chain reviewed the report.")
-            status_box.update(label="Research complete!", state="complete", expanded=False)
-
-            st.session_state["result"] = result
-            st.session_state["topic"] = topic
-
+            result = run_pipeline_with_ui(topic.strip())
+            st.session_state.result_state = result
+            st.session_state.history.append(topic.strip())
         except Exception as e:
-            status_box.update(label="Something went wrong", state="error", expanded=True)
-            st.error(f"⚠️ Pipeline failed: {e}")
+            st.error(f"Pipeline failed: {e}")
+        finally:
+            st.session_state.running = False
+        st.rerun()
 
-# ----------------------------------------------------------------------------
-# Results
-# ----------------------------------------------------------------------------
-if "result" in st.session_state:
-    result = st.session_state["result"]
-    topic_used = st.session_state.get("topic", "")
+# ──────────────────────────────────────────────────────────────────────────
+# Results section
+# ──────────────────────────────────────────────────────────────────────────
+def as_text(x) -> str:
+    """Normalize chain/agent outputs (str or objects with .content) to plain text."""
+    if x is None:
+        return ""
+    if isinstance(x, str):
+        return x
+    return getattr(x, "content", str(x))
 
-    st.markdown("## 📄 Results")
-    st.caption(f"Topic: **{topic_used}**")
 
-    tab_report, tab_critic, tab_search, tab_scraped = st.tabs(
-        ["📝 Final Report", "🧐 Critic Feedback", "🔍 Search Results", "📖 Scraped Content"]
+if st.session_state.result_state:
+    state = st.session_state.result_state
+
+    st.markdown("## 📊 Results")
+
+    tab_report, tab_feedback, tab_search, tab_scraped = st.tabs(
+        ["📝 Final Report", "🧐 Critic Feedback", "🔎 Search Results", "📖 Scraped Content"]
     )
 
     with tab_report:
-        st.markdown('<div class="report-card">', unsafe_allow_html=True)
-        st.markdown(result.get("report", "_No report generated._"))
+        st.markdown('<div class="card"><span class="agent-badge badge-writer">WRITER CHAIN</span>', unsafe_allow_html=True)
+        st.markdown(as_text(state.get("report", "")))
         st.markdown("</div>", unsafe_allow_html=True)
 
+        report_text = as_text(state.get("report", ""))
         st.download_button(
-            "⬇️ Download report (.md)",
-            data=result.get("report", ""),
-            file_name=f"{topic_used.replace(' ', '_')}_report.md",
+            "⬇️ Download Report (.md)",
+            data=report_text,
+            file_name=f"research_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
             mime="text/markdown",
         )
 
-    with tab_critic:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(result.get("feedback", "_No feedback generated._"))
+    with tab_feedback:
+        st.markdown('<div class="card"><span class="agent-badge badge-critic">CRITIC CHAIN</span>', unsafe_allow_html=True)
+        st.markdown(as_text(state.get("feedback", "")))
         st.markdown("</div>", unsafe_allow_html=True)
 
     with tab_search:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(result.get("search_results", "_No search results._"))
+        st.markdown('<div class="card"><span class="agent-badge badge-search">SEARCH AGENT</span>', unsafe_allow_html=True)
+        st.markdown(as_text(state.get("search_results", "")))
         st.markdown("</div>", unsafe_allow_html=True)
 
     with tab_scraped:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(result.get("scraped_content", "_No scraped content._"))
+        st.markdown('<div class="card"><span class="agent-badge badge-reader">READER AGENT</span>', unsafe_allow_html=True)
+        st.markdown(as_text(state.get("scraped_content", "")))
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ----------------------------------------------------------------------------
-# Footer
-# ----------------------------------------------------------------------------
+else:
+    st.info("👆 Enter a topic above and click **Start Research** to run the pipeline.")
+
 st.markdown(
-    """
-    <div class="footer">
-        Multi-Agent AI Research System · Search → Read → Write → Critique
-    </div>
-    """,
+    '<div class="footer-note">Multi-Agent Research System · powered by your existing agents.py & pipeline.py</div>',
     unsafe_allow_html=True,
 )
