@@ -5,6 +5,7 @@ Drop this file in the same folder as pipeline.py, agents.py, tools.py, and .env,
 then run:  streamlit run app.py
 """
 
+import re
 import time
 import streamlit as st
 from pipeline import run_research_pipeline
@@ -22,14 +23,16 @@ st.set_page_config(
 # ----------------------------------------------------------------------------
 # Session state defaults
 # ----------------------------------------------------------------------------
-if "topic_input" not in st.session_state:
-    st.session_state.topic_input = ""
+if "topic_box" not in st.session_state:
+    st.session_state.topic_box = ""
 if "result" not in st.session_state:
     st.session_state.result = None
 if "steps_done" not in st.session_state:
     st.session_state.steps_done = 0  # 0 = none, 4 = all done
 
 SUGGESTIONS = ["LLM agents 2025", "CRISPR gene editing", "Fusion energy progress"]
+MAX_RETRIES = 4
+DEFAULT_WAIT = 20  # seconds, used if we can't parse the wait time from the error
 
 # ----------------------------------------------------------------------------
 # Global CSS — dark, bold, editorial style
@@ -109,8 +112,8 @@ st.markdown(
             box-shadow: 0 0 0 1px #f5811f33 !important;
         }
 
-        /* Run button */
-        div.stButton > button[kind="primary"] {
+        /* Run button (form submit) */
+        div[data-testid="stFormSubmitButton"] button {
             width: 100%;
             background: linear-gradient(90deg, #f5811f, #f2b127);
             color: #0a0a0a;
@@ -121,7 +124,7 @@ st.markdown(
             padding: 0.85rem 1rem;
             box-shadow: 0 8px 24px rgba(245, 129, 31, 0.25);
         }
-        div.stButton > button[kind="primary"]:hover {
+        div[data-testid="stFormSubmitButton"] button:hover {
             opacity: 0.93;
         }
 
@@ -169,6 +172,7 @@ st.markdown(
         }
         .pipeline-card.done { border-left: 4px solid #22c55e; }
         .pipeline-card.active { border-left: 4px solid #f5811f; }
+        .pipeline-card.retry { border-left: 4px solid #eab308; }
 
         .step-num {
             color: #f5811f;
@@ -198,6 +202,7 @@ st.markdown(
         .status-done { color: #22c55e; background: #14532d33; border: 1px solid #22c55e55; }
         .status-active { color: #f5811f; background: #7c2d1233; border: 1px solid #f5811f55; }
         .status-pending { color: #6b7280; background: #1f1f1f; border: 1px solid #2b2b2b; }
+        .status-retry { color: #eab308; background: #422006; border: 1px solid #eab30855; }
 
         /* Result cards */
         .result-card {
@@ -227,28 +232,64 @@ st.markdown(
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
+# Helper: run pipeline with automatic retry on rate limits
+# ----------------------------------------------------------------------------
+def run_with_retry(topic, status_placeholder):
+    """Runs the pipeline; on a rate-limit error, waits and retries automatically."""
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return run_research_pipeline(topic), None
+        except Exception as e:
+            msg = str(e)
+            last_error = e
+            is_rate_limit = "rate_limit" in msg.lower() or "429" in msg
+
+            if not is_rate_limit or attempt == MAX_RETRIES:
+                return None, e
+
+            # try to parse "Please try again in 17.8s" from the error message
+            match = re.search(r"try again in ([\d.]+)s", msg)
+            wait_s = float(match.group(1)) + 1 if match else DEFAULT_WAIT
+
+            status_placeholder.markdown(
+                f'<div class="pipeline-card retry">'
+                f'<div><span class="step-title">⏳ Rate limit hit — retrying automatically</span>'
+                f'<div class="step-desc">Attempt {attempt}/{MAX_RETRIES}. '
+                f'Waiting {wait_s:.0f}s before trying again...</div></div>'
+                f'<div class="status-badge status-retry">RETRYING</div></div>',
+                unsafe_allow_html=True,
+            )
+            time.sleep(wait_s)
+    return None, last_error
+
+
+# ----------------------------------------------------------------------------
 # Main layout: left = input, right = pipeline
 # ----------------------------------------------------------------------------
 left, right = st.columns([1.05, 0.95], gap="large")
 
 with left:
     st.markdown('<div class="field-label">RESEARCH TOPIC</div>', unsafe_allow_html=True)
-    topic = st.text_input(
-        "Research topic",
-        value=st.session_state.topic_input,
-        placeholder="Quantum computing breakthroughs in 2025",
-        label_visibility="collapsed",
-        key="topic_box",
-    )
 
-    run_clicked = st.button("⚡  Run Research Pipeline", type="primary", use_container_width=True)
+    # A single st.form bundles the text input + submit button into ONE atomic
+    # action, so a single click (or Enter) always triggers the run — no more
+    # needing to click twice.
+    with st.form("research_form", clear_on_submit=False):
+        topic = st.text_input(
+            "Research topic",
+            placeholder="Quantum computing breakthroughs in 2025",
+            label_visibility="collapsed",
+            key="topic_box",
+        )
+        run_clicked = st.form_submit_button("⚡  Run Research Pipeline", use_container_width=True)
 
     st.markdown('<div class="try-label">TRY →</div>', unsafe_allow_html=True)
     pill_cols = st.columns(len(SUGGESTIONS))
     for i, sug in enumerate(SUGGESTIONS):
         with pill_cols[i]:
             if st.button(sug, key=f"sug_{i}", type="secondary", use_container_width=True):
-                st.session_state.topic_input = sug
+                st.session_state.topic_box = sug
                 st.rerun()
 
 with right:
@@ -261,55 +302,58 @@ with right:
         ("04", "Critic Chain", "Reviews and refines the final report"),
     ]
 
-    for idx, (num, title, desc) in enumerate(steps):
-        step_number = idx + 1
-        if st.session_state.steps_done >= step_number:
-            card_class, badge_class, badge_text = "done", "status-done", "✓ DONE"
-        elif st.session_state.steps_done == step_number - 1 and st.session_state.get("running", False):
-            card_class, badge_class, badge_text = "active", "status-active", "RUNNING"
-        else:
-            card_class, badge_class, badge_text = "", "status-pending", "PENDING"
+    pipeline_placeholder = st.empty()
 
-        st.markdown(
-            f"""
-            <div class="pipeline-card {card_class}">
-                <div>
-                    <span class="step-num">{num}</span><span class="step-title">{title}</span>
-                    <div class="step-desc">{desc}</div>
-                </div>
-                <div class="status-badge {badge_class}">{badge_text}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    def render_pipeline():
+        html = ""
+        for idx, (num, title, desc) in enumerate(steps):
+            step_number = idx + 1
+            if st.session_state.steps_done >= step_number:
+                card_class, badge_class, badge_text = "done", "status-done", "✓ DONE"
+            elif st.session_state.steps_done == step_number - 1 and st.session_state.get("running", False):
+                card_class, badge_class, badge_text = "active", "status-active", "RUNNING"
+            else:
+                card_class, badge_class, badge_text = "", "status-pending", "PENDING"
+
+            html += (
+                f'<div class="pipeline-card {card_class}">'
+                f'<div><span class="step-num">{num}</span><span class="step-title">{title}</span>'
+                f'<div class="step-desc">{desc}</div></div>'
+                f'<div class="status-badge {badge_class}">{badge_text}</div></div>'
+            )
+        pipeline_placeholder.markdown(html, unsafe_allow_html=True)
+
+    render_pipeline()
+    retry_placeholder = st.empty()
 
 # ----------------------------------------------------------------------------
 # Run pipeline
 # ----------------------------------------------------------------------------
 if run_clicked:
-    final_topic = topic.strip()
+    final_topic = st.session_state.topic_box.strip()
     if not final_topic:
         st.warning("Please enter a topic before running the pipeline.")
     else:
         st.session_state.running = True
-        st.session_state.steps_done = 0
-        placeholder = st.empty()
+        st.session_state.steps_done = 1
+        render_pipeline()
 
         with st.spinner("Agents are working..."):
-            try:
-                st.session_state.steps_done = 1
-                time.sleep(0.2)
-                result = run_research_pipeline(final_topic)
-                st.session_state.steps_done = 4
-                st.session_state.result = result
-                st.session_state.topic_input = final_topic
-            except Exception as e:
-                st.session_state.running = False
-                st.error(f"⚠️ Pipeline failed: {e}")
-                result = None
+            result, error = run_with_retry(final_topic, retry_placeholder)
 
+        retry_placeholder.empty()
         st.session_state.running = False
-        if st.session_state.result:
+
+        if error:
+            st.session_state.steps_done = 0
+            st.error(
+                f"⚠️ Pipeline failed after {MAX_RETRIES} attempts: {error}\n\n"
+                "This usually means the free API tier's per-minute token limit was hit "
+                "repeatedly. Wait a minute and try again, or use a topic that needs less scraping."
+            )
+        else:
+            st.session_state.steps_done = 4
+            st.session_state.result = result
             st.rerun()
 
 # ----------------------------------------------------------------------------
