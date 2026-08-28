@@ -1,265 +1,561 @@
 import streamlit as st
 from pipeline import run_research_pipeline
-from agents import build_search_agent, build_reader_agent, writer_chain, critic_chain
 
-# Page Configuration
+# --------------------------------------------------
+# PAGE CONFIG
+# --------------------------------------------------
+
 st.set_page_config(
-    page_title="Multi-Agent Research System",
+    page_title="ResearchMind AI",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Initialize Session State for Recent Topics
-if "recent_topics" not in st.session_state:
-    st.session_state.recent_topics = []
+# --------------------------------------------------
+# CUSTOM CSS
+# --------------------------------------------------
 
-if "search_topic" not in st.session_state:
-    st.session_state.search_topic = ""
-
-# Subdued, Elegant & Balanced Dark Theme CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-    }
-    
-    /* Main Background */
+
+    /* Main background */
     .stApp {
-        background-color: #0e1117;
-        color: #c9d1d9;
-    }
-    
-    /* Soft Subdued Header Banner */
-    .banner {
-        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-        border: 1px solid #374151;
-        border-radius: 12px;
-        padding: 2rem;
-        text-align: center;
-        margin-bottom: 1.5rem;
-    }
-    .banner h1 {
-        color: #f3f4f6;
-        font-size: 2.2rem;
-        font-weight: 700;
-        margin-bottom: 0.4rem;
-    }
-    .banner p {
-        color: #9ca3af;
-        font-size: 1rem;
-        margin: 0;
+        background: #0b1020;
     }
 
-    /* Muted Status Cards */
+    /* Hide default Streamlit elements */
+    #MainMenu {
+        visibility: hidden;
+    }
+
+    footer {
+        visibility: hidden;
+    }
+
+    header {
+        visibility: hidden;
+    }
+
+    /* Main container */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1400px;
+    }
+
+    /* Hero section */
+    .hero {
+        padding: 35px 40px;
+        border-radius: 24px;
+        background: linear-gradient(
+            135deg,
+            #111936 0%,
+            #18234a 50%,
+            #10182f 100%
+        );
+        border: 1px solid #28345e;
+        margin-bottom: 30px;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+    }
+
+    .hero-title {
+        font-size: 48px;
+        font-weight: 800;
+        margin-bottom: 8px;
+        background: linear-gradient(
+            90deg,
+            #8b5cf6,
+            #06b6d4,
+            #38bdf8
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+        font-size: 18px;
+        color: #aab4d0;
+        line-height: 1.6;
+    }
+
+    /* Agent cards */
     .agent-card {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 10px;
-        padding: 1rem;
-        text-align: center;
+        background: #11182d;
+        border: 1px solid #273252;
+        border-radius: 18px;
+        padding: 22px;
+        min-height: 150px;
+        transition: 0.3s;
     }
 
-    .card-title {
-        font-weight: 600;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.3rem;
-    }
-    
-    .status-text {
-        font-weight: 500;
-        font-size: 0.9rem;
+    .agent-card:hover {
+        border-color: #6366f1;
+        transform: translateY(-3px);
     }
 
-    /* Clean Styled Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
+    .agent-icon {
+        font-size: 30px;
+        margin-bottom: 10px;
     }
 
-    .stTabs [data-baseweb="tab"] {
-        background-color: #161b22;
-        border-radius: 8px;
-        color: #9ca3af;
-        padding: 8px 16px;
-        font-weight: 500;
-        border: 1px solid #30363d;
+    .agent-title {
+        font-size: 19px;
+        font-weight: 700;
+        color: #ffffff;
     }
 
-    .stTabs [aria-selected="true"] {
-        background-color: #2563eb !important;
-        color: #ffffff !important;
-        border-color: #2563eb !important;
+    .agent-description {
+        color: #8f9bb8;
+        font-size: 14px;
+        margin-top: 7px;
+        line-height: 1.5;
     }
 
-    /* Sidebar Styling */
-    [data-testid="stSidebar"] {
-        background-color: #161b22;
-        border-right: 1px solid #30363d;
+    /* Section heading */
+    .section-title {
+        font-size: 25px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-top: 25px;
+        margin-bottom: 15px;
     }
+
+    /* Result cards */
+    .result-card {
+        background: #10172b;
+        border: 1px solid #263354;
+        border-radius: 18px;
+        padding: 25px;
+        margin-bottom: 18px;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: #080d1b;
+        border-right: 1px solid #202a47;
+    }
+
+    /* Button */
+    .stButton > button {
+        width: 100%;
+        border-radius: 12px;
+        height: 50px;
+        font-size: 16px;
+        font-weight: 700;
+        border: none;
+        background: linear-gradient(
+            90deg,
+            #6366f1,
+            #8b5cf6
+        );
+        color: white;
+    }
+
+    .stButton > button:hover {
+        background: linear-gradient(
+            90deg,
+            #7c3aed,
+            #6366f1
+        );
+        border: none;
+    }
+
+    /* Text area */
+    textarea {
+        border-radius: 12px !important;
+    }
+
+    /* Metric cards */
+    [data-testid="stMetric"] {
+        background: #11182d;
+        border: 1px solid #273252;
+        padding: 15px;
+        border-radius: 15px;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
-# Function to handle search click from Recent Searches
-def select_topic(topic_name):
-    st.session_state.search_topic = topic_name
 
-# Sidebar Setup
+# --------------------------------------------------
+# SIDEBAR
+# --------------------------------------------------
+
 with st.sidebar:
-    st.markdown("## 🧠 **Research System**")
-    st.caption("Multi-agent pipeline: Search ➔ Read ➔ Write ➔ Critique")
-    st.markdown("---")
-    
-    st.markdown("### 🔧 **Pipeline Stages**")
-    st.markdown("""
-    <span style="color:#60a5fa; font-weight:600;">1. Search Agent</span> — Finds recent, reliable sources<br><br>
-    <span style="color:#c084fc; font-weight:600;">2. Reader Agent</span> — Scrapes the best source in depth<br><br>
-    <span style="color:#facc15; font-weight:600;">3. Writer Chain</span> — Drafts the final report<br><br>
-    <span style="color:#34d399; font-weight:600;">4. Critic Chain</span> — Reviews & gives feedback
-    """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    st.markdown("### 🕒 **Recent Searches**")
-    
-    if st.session_state.recent_topics:
-        for past_topic in reversed(st.session_state.recent_topics[-5:]):  # Shows last 5
-            st.button(f"🔍 {past_topic}", key=f"recent_{past_topic}", on_click=select_topic, args=(past_topic,), use_container_width=True)
-    else:
-        st.caption("No recent searches yet.")
 
-# Main Header Banner
+    st.markdown("""
+    <div style="text-align:center; padding:10px;">
+        <div style="font-size:50px;">🧠</div>
+        <h2 style="margin:0;">ResearchMind AI</h2>
+        <p style="color:#8994b2;">
+            Multi-Agent Research System
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    st.markdown("### ⚙️ System Architecture")
+
+    st.markdown("""
+    **🔎 Search Agent**  
+    Finds recent and reliable information.
+
+    **📖 Reader Agent**  
+    Scrapes and analyzes relevant resources.
+
+    **✍️ Writer Agent**  
+    Generates a structured research report.
+
+    **🧐 Critic Agent**  
+    Reviews the report and provides feedback.
+    """)
+
+    st.divider()
+
+    st.markdown("### 🛠️ Tech Stack")
+
+    st.markdown("""
+    - 🐍 Python
+    - ⚡ Streamlit
+    - 🔗 LangChain
+    - 🤖 Multi-Agent AI
+    - 🌐 Web Search
+    - 📚 Web Scraping
+    """)
+
+    st.divider()
+
+    st.caption("Built with ❤️ using Multi-Agent AI")
+
+
+# --------------------------------------------------
+# HERO
+# --------------------------------------------------
+
 st.markdown("""
-<div class="banner">
-    <h1>🧠 Multi-Agent Research System</h1>
-    <p>Enter a topic and let the Search, Reader, Writer & Critic agents collaborate to produce a reviewed report.</p>
+<div class="hero">
+
+    <div class="hero-title">
+        🧠 ResearchMind AI
+    </div>
+
+    <div class="hero-subtitle">
+        An intelligent multi-agent research system that searches the web,
+        reads relevant resources, writes a detailed report, and critically
+        evaluates the final result — automatically.
+    </div>
+
 </div>
 """, unsafe_allow_html=True)
 
-# Input Row
-col_input, col_btn = st.columns([4, 1])
-with col_input:
-    topic_input = st.text_input(
-        "Enter Topic", 
-        value=st.session_state.search_topic,
-        placeholder="e.g., impact of quantum computing on cryptography", 
-        label_visibility="collapsed"
+
+# --------------------------------------------------
+# AGENT PIPELINE
+# --------------------------------------------------
+
+st.markdown(
+    '<div class="section-title">🤖 AI Research Pipeline</div>',
+    unsafe_allow_html=True
+)
+
+col1, col2, col3, col4 = st.columns(4)
+
+agents = [
+    (
+        col1,
+        "🔎",
+        "Search Agent",
+        "Searches for recent, reliable and relevant information."
+    ),
+    (
+        col2,
+        "📖",
+        "Reader Agent",
+        "Selects and analyzes the most relevant sources."
+    ),
+    (
+        col3,
+        "✍️",
+        "Writer Agent",
+        "Creates a structured and detailed research report."
+    ),
+    (
+        col4,
+        "🧐",
+        "Critic Agent",
+        "Reviews the report and identifies improvements."
     )
-with col_btn:
-    start_btn = st.button("🚀 Start Research", type="primary", use_container_width=True)
+]
 
-# Main Execution Flow
-if start_btn:
-    if not topic_input.strip():
-        st.warning("⚠️ Enter a research topic first.")
+for col, icon, title, description in agents:
+
+    with col:
+
+        st.markdown(
+            f"""
+            <div class="agent-card">
+
+                <div class="agent-icon">{icon}</div>
+
+                <div class="agent-title">
+                    {title}
+                </div>
+
+                <div class="agent-description">
+                    {description}
+                </div>
+
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
+# --------------------------------------------------
+# TOPIC INPUT
+# --------------------------------------------------
+
+st.markdown(
+    '<div class="section-title">🔬 Start Your Research</div>',
+    unsafe_allow_html=True
+)
+
+topic = st.text_area(
+    "Research Topic",
+    placeholder=(
+        "Example: Impact of Generative AI and Large Language "
+        "Models on the Future of Software Development"
+    ),
+    height=100,
+    label_visibility="collapsed"
+)
+
+st.write("")
+
+
+# --------------------------------------------------
+# RESEARCH BUTTON
+# --------------------------------------------------
+
+if st.button("🚀 Start AI Research"):
+
+    if not topic.strip():
+
+        st.warning("⚠️ Please enter a research topic first.")
+
     else:
-        # Save to Recent Searches list
-        if topic_input not in st.session_state.recent_topics:
-            st.session_state.recent_topics.append(topic_input)
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # 4 Dynamic Agent Status Cards Layout
-        col1, col2, col3, col4 = st.columns(4)
-        c1, c2, c3, c4 = col1.empty(), col2.empty(), col3.empty(), col4.empty()
+        # Store topic
+        st.session_state["topic"] = topic
 
-        # Initial Card States (Muted Dark Colors)
-        c1.markdown("<div class='agent-card'><div class='card-title' style='color:#60a5fa;'>1. Search</div><div class='status-text' style='color:#6b7280;'>⏳ Idle</div></div>", unsafe_allow_html=True)
-        c2.markdown("<div class='agent-card'><div class='card-title' style='color:#c084fc;'>2. Reader</div><div class='status-text' style='color:#6b7280;'>⏳ Idle</div></div>", unsafe_allow_html=True)
-        c3.markdown("<div class='agent-card'><div class='card-title' style='color:#facc15;'>3. Writer</div><div class='status-text' style='color:#6b7280;'>⏳ Idle</div></div>", unsafe_allow_html=True)
-        c4.markdown("<div class='agent-card'><div class='card-title' style='color:#34d399;'>4. Critic</div><div class='status-text' style='color:#6b7280;'>⏳ Idle</div></div>", unsafe_allow_html=True)
+        # Progress UI
+        progress = st.progress(0)
 
-        progress_bar = st.progress(0)
-        status_box = st.empty()
-        state = {}
+        status = st.status(
+            "🚀 Initializing ResearchMind AI...",
+            expanded=True
+        )
 
         try:
-            # 1. Search Agent
-            c1.markdown("<div class='agent-card' style='border-color:#60a5fa;'><div class='card-title' style='color:#60a5fa;'>1. Search</div><div class='status-text' style='color:#60a5fa;'>🔎 Working...</div></div>", unsafe_allow_html=True)
-            status_box.info("🔎 **Search Agent** is finding recent, reliable sources...")
-            progress_bar.progress(25)
 
-            search_agent = build_search_agent()
-            search_result = search_agent.invoke({
-                "messages": [("user", f"Find recent, reliable and detailed information about: {topic_input}")]
-            })
-            state["search_results"] = search_result['messages'][-1].content
-            c1.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#60a5fa;'>1. Search</div><div class='status-text' style='color:#34d399;'>✅ Complete</div></div>", unsafe_allow_html=True)
+            # ------------------------------------------
+            # STEP 1
+            # ------------------------------------------
 
-            # 2. Reader Agent
-            c2.markdown("<div class='agent-card' style='border-color:#c084fc;'><div class='card-title' style='color:#c084fc;'>2. Reader</div><div class='status-text' style='color:#c084fc;'>📖 Scraping...</div></div>", unsafe_allow_html=True)
-            status_box.info("📖 **Reader Agent** is scraping top content from web sources...")
-            progress_bar.progress(50)
+            status.write("🔎 Search Agent is searching the web...")
+            progress.progress(15)
 
-            reader_agent = build_reader_agent()
-            reader_result = reader_agent.invoke({
-                "messages": [("user",
-                    f"Based on the following search results about '{topic_input}', "
-                    f"pick the most relevant URL and scrape it for deeper content.\n\n"
-                    f"Search Results:\n{state['search_results'][:800]}"
-                )]
-            })
-            state['scraped_content'] = reader_result['messages'][-1].content
-            c2.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#c084fc;'>2. Reader</div><div class='status-text' style='color:#34d399;'>✅ Complete</div></div>", unsafe_allow_html=True)
+            # ------------------------------------------
+            # RUN COMPLETE PIPELINE
+            # ------------------------------------------
 
-            # 3. Writer Chain
-            c3.markdown("<div class='agent-card' style='border-color:#facc15;'><div class='card-title' style='color:#facc15;'>3. Writer</div><div class='status-text' style='color:#facc15;'>✍️ Drafting...</div></div>", unsafe_allow_html=True)
-            status_box.info("✍️ **Writer Chain** is assembling information and drafting report...")
-            progress_bar.progress(75)
+            result = run_research_pipeline(topic)
 
-            research_combined = (
-                f"SEARCH RESULTS : \n {state['search_results']} \n\n"
-                f"DETAILED SCRAPED CONTENT : \n {state['scraped_content']}"
+            # ------------------------------------------
+            # COMPLETE
+            # ------------------------------------------
+
+            progress.progress(100)
+
+            status.update(
+                label="✅ Research completed successfully!",
+                state="complete",
+                expanded=False
             )
-            state["report"] = writer_chain.invoke({
-                "topic": topic_input,
-                "research": research_combined
-            })
-            c3.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#facc15;'>3. Writer</div><div class='status-text' style='color:#34d399;'>✅ Complete</div></div>", unsafe_allow_html=True)
 
-            # 4. Critic Chain
-            c4.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#34d399;'>4. Critic</div><div class='status-text' style='color:#34d399;'>🧐 Reviewing...</div></div>", unsafe_allow_html=True)
-            status_box.info("🧐 **Critic Chain** is analyzing report for review & feedback...")
-            progress_bar.progress(90)
+            # Save results
+            st.session_state["research_result"] = result
 
-            state["feedback"] = critic_chain.invoke({
-                "topic": topic_input,
-                "report": state['report']
-            })
-            c4.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#34d399;'>4. Critic</div><div class='status-text' style='color:#34d399;'>✅ Complete</div></div>", unsafe_allow_html=True)
+            st.success(
+                "🎉 Your multi-agent research report is ready!"
+            )
 
-            progress_bar.progress(100)
-            status_box.success("🎉 **Research pipeline execution finished!**")
+        except Exception as e:
 
-            st.markdown("<br>", unsafe_allow_html=True)
+            status.update(
+                label="❌ Research pipeline failed",
+                state="error"
+            )
 
-            # Output Tabs
-            t1, t2, t3, t4 = st.tabs([
-                "📄 Draft Report", 
-                "🧐 Critic Review", 
-                "🔍 Search Results", 
-                "📑 Scraped Content"
-            ])
+            st.error(f"Error: {str(e)}")
 
-            with t1:
-                st.markdown(state["report"])
-                st.download_button(
-                    label="📥 Download Report (.md)",
-                    data=str(state["report"]),
-                    file_name=f"{topic_input.replace(' ', '_')}_report.md",
-                    mime="text/markdown"
-                )
 
-            with t2:
-                st.markdown(state["feedback"])
+# --------------------------------------------------
+# RESULTS
+# --------------------------------------------------
 
-            with t3:
-                st.code(state["search_results"], language="text")
+if "research_result" in st.session_state:
 
-            with t4:
-                st.code(state["scraped_content"], language="text")
+    result = st.session_state["research_result"]
 
-        except Exception as err:
-            st.error(f"Execution Error: {err}")
+    st.markdown("---")
+
+    st.markdown(
+        '<div class="section-title">📊 Research Results</div>',
+        unsafe_allow_html=True
+    )
+
+    # Metrics
+    search_data = result.get("search_results", "")
+    scraped_data = result.get("scraped_content", "")
+    report = result.get("report", "")
+    feedback = result.get("feedback", "")
+
+    # Handle LangChain AIMessage objects
+    if hasattr(report, "content"):
+        report = report.content
+
+    if hasattr(feedback, "content"):
+        feedback = feedback.content
+
+    if hasattr(search_data, "content"):
+        search_data = search_data.content
+
+    if hasattr(scraped_data, "content"):
+        scraped_data = scraped_data.content
+
+    m1, m2, m3, m4 = st.columns(4)
+
+    with m1:
+        st.metric("🤖 AI Agents", "4")
+
+    with m2:
+        st.metric("🔎 Search", "Completed")
+
+    with m3:
+        st.metric("📝 Report", "Generated")
+
+    with m4:
+        st.metric("🧐 Review", "Completed")
+
+
+    # --------------------------------------------------
+    # TABS
+    # --------------------------------------------------
+
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📝 Final Report",
+        "🧐 Critic Review",
+        "🔎 Search Results",
+        "📖 Scraped Content"
+    ])
+
+
+    # --------------------------------------------------
+    # FINAL REPORT
+    # --------------------------------------------------
+
+    with tab1:
+
+        st.markdown(
+            '<div class="result-card">',
+            unsafe_allow_html=True
+        )
+
+        st.markdown("### 📝 AI Generated Research Report")
+
+        st.markdown(report)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Download report
+        st.download_button(
+            label="⬇️ Download Research Report",
+            data=str(report),
+            file_name="research_report.txt",
+            mime="text/plain"
+        )
+
+
+    # --------------------------------------------------
+    # CRITIC
+    # --------------------------------------------------
+
+    with tab2:
+
+        st.markdown(
+            '<div class="result-card">',
+            unsafe_allow_html=True
+        )
+
+        st.markdown("### 🧐 Critic Agent Feedback")
+
+        st.markdown(feedback)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+    # --------------------------------------------------
+    # SEARCH RESULTS
+    # --------------------------------------------------
+
+    with tab3:
+
+        st.markdown(
+            '<div class="result-card">',
+            unsafe_allow_html=True
+        )
+
+        st.markdown("### 🔎 Search Agent Output")
+
+        st.write(search_data)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+    # --------------------------------------------------
+    # SCRAPED CONTENT
+    # --------------------------------------------------
+
+    with tab4:
+
+        st.markdown(
+            '<div class="result-card">',
+            unsafe_allow_html=True
+        )
+
+        st.markdown("### 📖 Reader Agent Output")
+
+        st.write(scraped_data)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+# --------------------------------------------------
+# FOOTER
+# --------------------------------------------------
+
+st.markdown("---")
+
+st.markdown(
+    """
+    <div style="text-align:center; color:#66708f; padding:20px;">
+        <b>ResearchMind AI</b> · Multi-Agent Research System
+        <br>
+        <small>Search → Read → Write → Critique</small>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
