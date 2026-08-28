@@ -1,21 +1,15 @@
 """
-streamlit_app.py
------------------
-Modern, professional Streamlit front-end for the multi-agent research
-pipeline defined in `pipeline.py`.
+streamlit_app_v2.py
+--------------------
+Alternative UI for the multi-agent research pipeline (pipeline.py).
+Dark "dashboard" theme with a step-by-step timeline instead of a hero-card
+layout. pipeline.py / agents.py are untouched.
 
-This file does NOT modify pipeline.py, agents.py, or tools.py in any way.
-It simply imports `run_research_pipeline` and renders a polished UI around
-it, including a live log stream (captured from the existing print()
-statements) so the user can watch the Search -> Read -> Write -> Critique
-stages happen in real time.
-
-Run with:
-    streamlit run streamlit_app.py
+Run:
+    streamlit run streamlit_app_v2.py
 """
 
 import io
-import sys
 import contextlib
 import datetime as dt
 
@@ -24,240 +18,210 @@ import streamlit as st
 from pipeline import run_research_pipeline
 
 
-# ----------------------------------------------------------------------
-# Page config (must be the first Streamlit call)
-# ----------------------------------------------------------------------
 st.set_page_config(
-    page_title="Multi-Agent Research System",
-    page_icon="🧠",
+    page_title="Research Agent Dashboard",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-
 # ----------------------------------------------------------------------
-# Custom CSS — modern / professional theme
+# Dark dashboard theme
 # ----------------------------------------------------------------------
 st.markdown(
     """
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-        html, body, [class*="css"] {
-            font-family: 'Inter', sans-serif;
-        }
+        html, body, [class*="css"] { font-family: 'Space Grotesk', sans-serif; }
+        #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 
-        /* Hide default Streamlit chrome for a cleaner look */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 3rem;
-            max-width: 1100px;
+        .stApp {
+            background: #0b0e14;
+            color: #e6e9ef;
         }
-
-        /* Hero header */
-        .hero {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
-            padding: 2.4rem 2.2rem;
-            border-radius: 18px;
-            margin-bottom: 1.6rem;
-            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.25);
-        }
-        .hero h1 {
-            color: #ffffff;
-            font-size: 2.1rem;
-            font-weight: 800;
-            margin: 0;
-        }
-        .hero p {
-            color: rgba(255,255,255,0.9);
-            font-size: 1.02rem;
-            margin-top: 0.5rem;
-            margin-bottom: 0;
-        }
-
-        /* Agent pipeline chips */
-        .pipeline-row {
-            display: flex;
-            gap: 0.6rem;
-            flex-wrap: wrap;
-            margin-top: 1rem;
-        }
-        .pipeline-chip {
-            background: rgba(255,255,255,0.18);
-            color: #fff;
-            padding: 0.35rem 0.85rem;
-            border-radius: 999px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            border: 1px solid rgba(255,255,255,0.35);
-        }
-
-        /* Section cards */
-        .card {
-            background: #ffffff;
-            border: 1px solid #ececf3;
-            border-radius: 16px;
-            padding: 1.6rem 1.8rem;
-            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
-            margin-bottom: 1.2rem;
-        }
-        .card h3 {
-            margin-top: 0;
-            font-weight: 700;
-        }
-
-        .stButton>button {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
-            font-weight: 600;
-            border: none;
-            border-radius: 10px;
-            padding: 0.6rem 1.4rem;
-            transition: all 0.15s ease;
-            width: 100%;
-        }
-        .stButton>button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.35);
-        }
-
-        .log-box {
-            background: #0f172a;
-            color: #a7f3d0;
-            font-family: 'SFMono-Regular', Consolas, monospace;
-            font-size: 0.82rem;
-            padding: 1rem 1.1rem;
-            border-radius: 12px;
-            height: 260px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            line-height: 1.5;
-        }
-
-        .badge-done {
-            background: #dcfce7;
-            color: #15803d;
-            padding: 0.15rem 0.6rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
+        .block-container { padding-top: 1.6rem; max-width: 1200px; }
 
         section[data-testid="stSidebar"] {
-            background: #0f172a;
+            background: #0f131b;
+            border-right: 1px solid #1e2430;
         }
-        section[data-testid="stSidebar"] * {
-            color: #e2e8f0 !important;
+        section[data-testid="stSidebar"] * { color: #cdd3e0 !important; }
+
+        /* Top bar */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1.2rem;
+            border-bottom: 1px solid #1e2430;
+            margin-bottom: 1.5rem;
         }
-        section[data-testid="stSidebar"] .stTextInput input,
-        section[data-testid="stSidebar"] textarea {
-            color: #0f172a !important;
+        .topbar h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+            color: #f4f6fb;
         }
+        .topbar .tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #22d3ee;
+            background: rgba(34,211,238,0.1);
+            border: 1px solid rgba(34,211,238,0.3);
+            padding: 0.25rem 0.7rem;
+            border-radius: 6px;
+        }
+
+        /* Timeline */
+        .timeline { display: flex; gap: 0; margin-bottom: 1.5rem; }
+        .tl-step {
+            flex: 1;
+            background: #12161f;
+            border: 1px solid #1e2430;
+            padding: 0.9rem 1rem;
+            position: relative;
+        }
+        .tl-step:first-child { border-radius: 10px 0 0 10px; }
+        .tl-step:last-child { border-radius: 0 10px 10px 0; }
+        .tl-step .num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #6b7280;
+        }
+        .tl-step .name { font-weight: 600; font-size: 0.92rem; color: #e6e9ef; }
+        .tl-step.active { background: #16202b; border-color: #22d3ee; }
+        .tl-step.active .num { color: #22d3ee; }
+        .tl-step.done .num::before { content: "✓ "; color: #34d399; }
+
+        /* Panel */
+        .panel {
+            background: #12161f;
+            border: 1px solid #1e2430;
+            border-radius: 12px;
+            padding: 1.4rem 1.6rem;
+            margin-bottom: 1.1rem;
+        }
+        .panel h4 {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #9aa4b8;
+            margin-top: 0;
+            margin-bottom: 0.8rem;
+        }
+
+        .metric {
+            background: #12161f;
+            border: 1px solid #1e2430;
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .metric .v { font-size: 1.4rem; font-weight: 700; color: #22d3ee; }
+        .metric .l { font-size: 0.75rem; color: #8892a6; text-transform: uppercase; }
+
+        .stButton>button {
+            background: #22d3ee;
+            color: #0b0e14;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            padding: 0.55rem 1.2rem;
+            width: 100%;
+        }
+        .stButton>button:hover { background: #67e8f9; }
+
+        .console {
+            background: #05070b;
+            border: 1px solid #1e2430;
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: #34d399;
+            padding: 1rem;
+            height: 240px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        [data-testid="stTabs"] button { color: #9aa4b8; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+STAGES = ["Search", "Read", "Write", "Critique"]
 
-# ----------------------------------------------------------------------
-# Session state
-# ----------------------------------------------------------------------
-if "history" not in st.session_state:
-    st.session_state.history = []   # list of {topic, timestamp, state}
 if "result" not in st.session_state:
     st.session_state.result = None
+if "history" not in st.session_state:
+    st.session_state.history = []
 if "running" not in st.session_state:
     st.session_state.running = False
-
 
 # ----------------------------------------------------------------------
 # Sidebar
 # ----------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("## 🧠 Research Console")
-    st.caption("Multi-Agent AI Research System")
+    st.markdown("### ⚡ Agent Dashboard")
+    st.caption("LangChain multi-agent research pipeline")
     st.divider()
 
-    topic_input = st.text_area(
-        "Research topic",
-        placeholder="e.g. Impact of quantum computing on cybersecurity",
-        height=100,
-    )
-
-    example_topics = [
-        "Latest advances in solid-state batteries",
-        "How AI agents are changing software engineering",
-        "Global trends in renewable energy investment",
-    ]
-    st.caption("Quick examples")
-    for ex in example_topics:
-        if st.button(ex, key=f"ex_{ex}", use_container_width=True):
-            topic_input = ex
-            st.session_state["_prefill"] = ex
-
-    if st.session_state.get("_prefill"):
-        topic_input = st.session_state["_prefill"]
+    topic = st.text_input("Topic", placeholder="Type a research topic...")
+    run_clicked = st.button("Run Pipeline", disabled=st.session_state.running)
 
     st.divider()
-    run_clicked = st.button("🚀 Run Research", use_container_width=True, disabled=st.session_state.running)
-
-    st.divider()
-    st.caption("Pipeline stages")
+    st.markdown("**Agents in this pipeline**")
     st.markdown(
-        "1. 🔎 **Search Agent**\n"
-        "2. 📖 **Reader Agent**\n"
-        "3. ✍️ **Writer Chain**\n"
-        "4. 🧐 **Critic Chain**"
+        "- `search_agent` — web search\n"
+        "- `reader_agent` — scrapes top source\n"
+        "- `writer_chain` — drafts report\n"
+        "- `critic_chain` — reviews report"
     )
 
     if st.session_state.history:
         st.divider()
-        st.caption("Recent runs")
-        for item in reversed(st.session_state.history[-5:]):
-            st.markdown(f"- {item['timestamp']} — {item['topic'][:40]}")
-
+        st.markdown("**History**")
+        for h in reversed(st.session_state.history[-6:]):
+            st.caption(f"`{h['timestamp']}` {h['topic'][:32]}")
 
 # ----------------------------------------------------------------------
-# Hero header
+# Top bar
 # ----------------------------------------------------------------------
 st.markdown(
     """
-    <div class="hero">
-        <h1>Multi-Agent Research System</h1>
-        <p>Search, read, write, and critique — an autonomous agent pipeline that
-        turns any topic into a polished, fact-checked report.</p>
-        <div class="pipeline-row">
-            <span class="pipeline-chip">🔎 Search Agent</span>
-            <span class="pipeline-chip">📖 Reader Agent</span>
-            <span class="pipeline-chip">✍️ Writer Chain</span>
-            <span class="pipeline-chip">🧐 Critic Chain</span>
-        </div>
+    <div class="topbar">
+        <h1>Multi-Agent Research Pipeline</h1>
+        <span class="tag">● 4 agents online</span>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
 
-# ----------------------------------------------------------------------
-# Live log capture helper
-# ----------------------------------------------------------------------
-class _StreamlitLogStream(io.TextIOBase):
-    """Redirects print() output from pipeline.py into a live Streamlit box."""
+def render_timeline(active_idx=-1, done_upto=-1):
+    html = '<div class="timeline">'
+    for i, s in enumerate(STAGES):
+        cls = "tl-step"
+        if i <= done_upto:
+            cls += " done"
+        elif i == active_idx:
+            cls += " active"
+        html += f'<div class="{cls}"><div class="num">STEP {i+1:02d}</div><div class="name">{s}</div></div>'
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
 
+
+class _ConsoleStream(io.TextIOBase):
     def __init__(self, placeholder):
         self.placeholder = placeholder
-        self.buffer = ""
+        self.buf = ""
 
     def write(self, s):
         if s:
-            self.buffer += s
-            self.placeholder.markdown(
-                f'<div class="log-box">{self.buffer[-6000:]}</div>',
-                unsafe_allow_html=True,
-            )
+            self.buf += s
+            self.placeholder.markdown(f'<div class="console">{self.buf[-6000:]}</div>', unsafe_allow_html=True)
         return len(s)
 
     def flush(self):
@@ -265,105 +229,80 @@ class _StreamlitLogStream(io.TextIOBase):
 
 
 # ----------------------------------------------------------------------
-# Run pipeline
+# Run
 # ----------------------------------------------------------------------
 if run_clicked:
-    if not topic_input or not topic_input.strip():
-        st.warning("Please enter a research topic before running the pipeline.")
+    if not topic or not topic.strip():
+        st.warning("Enter a topic first.")
     else:
         st.session_state.running = True
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("### ⚙️ Pipeline in progress")
-        status = st.status("Initializing agents...", expanded=True)
-        log_placeholder = status.empty()
+        render_timeline(active_idx=0)
+        st.markdown('<div class="panel"><h4>Live Console</h4>', unsafe_allow_html=True)
+        console_ph = st.empty()
         st.markdown("</div>", unsafe_allow_html=True)
 
         try:
-            with contextlib.redirect_stdout(_StreamlitLogStream(log_placeholder)):
-                result_state = run_research_pipeline(topic_input.strip())
+            with contextlib.redirect_stdout(_ConsoleStream(console_ph)):
+                result = run_research_pipeline(topic.strip())
 
-            status.update(label="✅ Research pipeline completed", state="complete", expanded=False)
-            st.session_state.result = result_state
+            st.session_state.result = result
             st.session_state.history.append(
-                {
-                    "topic": topic_input.strip(),
-                    "timestamp": dt.datetime.now().strftime("%H:%M:%S"),
-                    "state": result_state,
-                }
+                {"topic": topic.strip(), "timestamp": dt.datetime.now().strftime("%H:%M:%S")}
             )
-            st.toast("Research report ready!", icon="✅")
-
+            st.success("Pipeline finished — all 4 agents completed.")
         except Exception as e:
-            status.update(label="❌ Pipeline failed", state="error", expanded=True)
-            st.error(f"Something went wrong while running the pipeline:\n\n**{e}**")
+            st.error(f"Pipeline error: {e}")
         finally:
             st.session_state.running = False
-
 
 # ----------------------------------------------------------------------
 # Results
 # ----------------------------------------------------------------------
 if st.session_state.result:
     state = st.session_state.result
+    render_timeline(done_upto=3)
 
-    st.markdown("### 📊 Results")
-
-    col1, col2, col3, col4 = st.columns(4)
-    for col, label in zip(
-        (col1, col2, col3, col4),
-        ("Search", "Read", "Write", "Critique"),
+    c1, c2, c3, c4 = st.columns(4)
+    for col, label, val in zip(
+        (c1, c2, c3, c4),
+        ("Search", "Reader", "Writer", "Critic"),
+        ("OK", "OK", "OK", "OK"),
     ):
         with col:
-            st.markdown(
-                f'<div class="card" style="text-align:center;">'
-                f'<span class="badge-done">✓ Done</span><br><br>'
-                f'<b>{label}</b></div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f'<div class="metric"><div class="v">{val}</div><div class="l">{label}</div></div>', unsafe_allow_html=True)
 
-    tab_report, tab_critic, tab_search, tab_scrape = st.tabs(
-        ["📄 Final Report", "🧐 Critic Feedback", "🔎 Search Results", "📖 Scraped Content"]
-    )
+    st.write("")
+    tab1, tab2, tab3, tab4 = st.tabs(["Report", "Critic Feedback", "Search Results", "Scraped Content"])
 
-    with tab_report:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        report_text = state.get("report", "")
-        report_text = getattr(report_text, "content", report_text)
-        st.markdown(str(report_text))
+    def _text(v):
+        return str(getattr(v, "content", v))
+
+    with tab1:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.markdown(_text(state.get("report", "")))
         st.markdown("</div>", unsafe_allow_html=True)
-        st.download_button(
-            "⬇️ Download report (.md)",
-            data=str(report_text),
-            file_name="research_report.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
+        st.download_button("Download report.md", _text(state.get("report", "")), file_name="report.md")
 
-    with tab_critic:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        feedback_text = state.get("feedback", "")
-        feedback_text = getattr(feedback_text, "content", feedback_text)
-        st.markdown(str(feedback_text))
+    with tab2:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.markdown(_text(state.get("feedback", "")))
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab_search:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+    with tab3:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
         st.text(state.get("search_results", ""))
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab_scrape:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+    with tab4:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
         st.text(state.get("scraped_content", ""))
         st.markdown("</div>", unsafe_allow_html=True)
-
 else:
+    render_timeline()
     st.markdown(
-        """
-        <div class="card" style="text-align:center; padding:3rem 1rem;">
-            <h3>👋 Enter a topic in the sidebar and click <i>Run Research</i></h3>
-            <p style="color:#64748b;">Your multi-agent pipeline will search the web, read the best
-            source, draft a report, and have it reviewed by a critic agent — all in one click.</p>
-        </div>
-        """,
+        '<div class="panel" style="text-align:center; padding:2.5rem;">'
+        '<h4 style="color:#e6e9ef;">Waiting for input</h4>'
+        '<p style="color:#8892a6;">Enter a topic in the sidebar and click <b>Run Pipeline</b>.</p>'
+        "</div>",
         unsafe_allow_html=True,
     )
