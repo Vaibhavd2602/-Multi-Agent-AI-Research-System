@@ -7,7 +7,7 @@ from pipeline import run_research_pipeline
 # =========================================================
 
 st.set_page_config(
-    page_title="ResearchMind AI",
+    page_title="MULTI AI RESEARCH SYSTEM",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -21,61 +21,110 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-    /* Main background */
+    /* =========================
+       MAIN APP
+       ========================= */
+
     .stApp {
         background-color: #0b1020;
     }
 
-    /* Main content */
     .block-container {
         max-width: 1400px;
         padding-top: 2rem;
         padding-bottom: 3rem;
     }
 
-    /* Sidebar */
+
+    /* =========================
+       SIDEBAR
+       ========================= */
+
     section[data-testid="stSidebar"] {
         background-color: #080d1b;
         border-right: 1px solid #222b45;
     }
 
-    /* Main title */
+    section[data-testid="stSidebar"] h1 {
+        font-size: 23px;
+        text-align: center;
+    }
+
+
+    /* =========================
+       MAIN TITLE
+       ========================= */
+
     .main-title {
-        font-size: 48px;
+        font-size: 45px;
         font-weight: 800;
         text-align: center;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
+
+        background: linear-gradient(
+            90deg,
+            #8b5cf6,
+            #06b6d4,
+            #38bdf8
+        );
+
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
+
 
     .subtitle {
         text-align: center;
         color: #9ca8c4;
-        font-size: 18px;
+        font-size: 17px;
+        line-height: 1.6;
         margin-bottom: 35px;
     }
 
-    /* Agent boxes */
-    .agent-box {
-        background-color: #11182d;
-        border: 1px solid #283453;
-        border-radius: 16px;
-        padding: 20px;
-        min-height: 150px;
-    }
 
-    .agent-box:hover {
-        border-color: #6366f1;
-    }
+    /* =========================
+       SECTION HEADINGS
+       ========================= */
 
-    /* Section title */
     .section-heading {
         font-size: 25px;
         font-weight: 700;
+        color: white;
         margin-top: 25px;
-        margin-bottom: 15px;
+        margin-bottom: 18px;
     }
 
-    /* Button */
+
+    /* =========================
+       AGENT AREA
+       ========================= */
+
+    .agent-title {
+        font-size: 19px;
+        font-weight: 700;
+        color: white;
+    }
+
+    .agent-description {
+        color: #9ca8c4;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+
+    /* =========================
+       TEXT AREA
+       ========================= */
+
+    textarea {
+        border-radius: 12px !important;
+    }
+
+
+    /* =========================
+       BUTTON
+       ========================= */
+
     .stButton > button {
         width: 100%;
         height: 52px;
@@ -84,17 +133,35 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* Text area */
-    textarea {
-        border-radius: 12px !important;
-    }
 
-    /* Metrics */
+    /* =========================
+       METRICS
+       ========================= */
+
     [data-testid="stMetric"] {
         background-color: #11182d;
         border: 1px solid #283453;
         border-radius: 14px;
         padding: 15px;
+    }
+
+
+    /* =========================
+       TABS
+       ========================= */
+
+    button[data-baseweb="tab"] {
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+
+    /* =========================
+       DIVIDER
+       ========================= */
+
+    hr {
+        border-color: #26314d;
     }
 
 </style>
@@ -107,13 +174,13 @@ st.markdown("""
 
 with st.sidebar:
 
-    st.markdown("# 🧠 ResearchMind AI")
+    st.markdown("# 🧠 MULTI AI RESEARCH SYSTEM")
 
-    st.caption("Multi-Agent Research System")
+    st.caption("Intelligent Multi-Agent Research")
 
     st.divider()
 
-    st.markdown("### ⚙️ System Architecture")
+    st.markdown("### 🔎 Research Agents")
 
     st.markdown("""
     **🔎 Search Agent**
@@ -130,33 +197,16 @@ with st.sidebar:
 
     **🧐 Critic Agent**
 
-    Reviews the final report.
+    Reviews the final report and provides feedback.
     """)
-
-    st.divider()
-
-    st.markdown("### 🛠️ Tech Stack")
-
-    st.markdown("""
-    🐍 Python  
-    ⚡ Streamlit  
-    🔗 LangChain  
-    🤖 Multi-Agent AI  
-    🌐 Web Search  
-    📚 Web Scraping
-    """)
-
-    st.divider()
-
-    st.caption("Built with ❤️ using Multi-Agent AI")
 
 
 # =========================================================
-# HEADER
+# MAIN HEADER
 # =========================================================
 
 st.markdown(
-    '<div class="main-title">🧠 ResearchMind AI</div>',
+    '<div class="main-title">🧠 MULTI AI RESEARCH SYSTEM</div>',
     unsafe_allow_html=True
 )
 
@@ -170,7 +220,7 @@ st.markdown(
 
 
 # =========================================================
-# AGENT PIPELINE
+# AI RESEARCH PIPELINE
 # =========================================================
 
 st.markdown(
@@ -178,43 +228,72 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 col1, col2, col3, col4 = st.columns(4)
 
 
-with col1:
-    with st.container(border=True):
-        st.markdown("### 🔎 Search Agent")
-        st.write(
-            "Searches the web for recent, reliable and "
-            "relevant information."
-        )
+# ---------------------------------------------------------
+# SEARCH AGENT
+# ---------------------------------------------------------
 
+with col1:
+
+    st.markdown("### 🔎 Search Agent")
+
+    st.markdown(
+        '<div class="agent-description">'
+        'Searches the web for recent, reliable and relevant information.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+# ---------------------------------------------------------
+# READER AGENT
+# ---------------------------------------------------------
 
 with col2:
-    with st.container(border=True):
-        st.markdown("### 📖 Reader Agent")
-        st.write(
-            "Selects the best source and extracts "
-            "deeper information."
-        )
 
+    st.markdown("### 📖 Reader Agent")
+
+    st.markdown(
+        '<div class="agent-description">'
+        'Selects the best source and extracts deeper information.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+# ---------------------------------------------------------
+# WRITER AGENT
+# ---------------------------------------------------------
 
 with col3:
-    with st.container(border=True):
-        st.markdown("### ✍️ Writer Agent")
-        st.write(
-            "Uses the collected research to create "
-            "a detailed report."
-        )
 
+    st.markdown("### ✍️ Writer Agent")
+
+    st.markdown(
+        '<div class="agent-description">'
+        'Uses the collected research to create a detailed report.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+# ---------------------------------------------------------
+# CRITIC AGENT
+# ---------------------------------------------------------
 
 with col4:
-    with st.container(border=True):
-        st.markdown("### 🧐 Critic Agent")
-        st.write(
-            "Reviews the generated report and provides "
-            "critical feedback."
-        )
+
+    st.markdown("### 🧐 Critic Agent")
+
+    st.markdown(
+        '<div class="agent-description">'
+        'Reviews the generated report and provides critical feedback.'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
 
 # =========================================================
@@ -226,34 +305,42 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 topic = st.text_area(
-    "Enter your research topic",
+    "Research Topic",
     placeholder=(
         "Example: Impact of Generative AI and Large Language "
         "Models on the Future of Software Development"
     ),
-    height=120
+    height=120,
+    label_visibility="collapsed"
 )
 
 
 # =========================================================
-# START RESEARCH
+# START RESEARCH BUTTON
 # =========================================================
 
 if st.button("🚀 Start AI Research", type="primary"):
 
     if not topic.strip():
 
-        st.warning("⚠️ Please enter a research topic.")
+        st.warning("⚠️ Please enter a research topic first.")
 
     else:
 
         st.session_state["topic"] = topic
 
-        # Progress
+        # ---------------------------------------------
+        # Progress bar
+        # ---------------------------------------------
+
         progress = st.progress(0)
 
-        # Status
+        # ---------------------------------------------
+        # Status box
+        # ---------------------------------------------
+
         status = st.status(
             "🚀 ResearchMind AI is working...",
             expanded=True
@@ -261,20 +348,60 @@ if st.button("🚀 Start AI Research", type="primary"):
 
         try:
 
-            status.write("🔎 Search Agent is searching for information...")
-            progress.progress(20)
+            # -----------------------------------------
+            # STEP 1
+            # -----------------------------------------
 
-            status.write("📖 Reader Agent is analyzing resources...")
-            progress.progress(40)
+            status.write(
+                "🔎 Search Agent is searching for recent information..."
+            )
 
-            status.write("✍️ Writer Agent is preparing the report...")
-            progress.progress(70)
+            progress.progress(15)
 
-            status.write("🧐 Critic Agent is reviewing the report...")
-            progress.progress(90)
 
-            # Run actual pipeline
+            # -----------------------------------------
+            # STEP 2
+            # -----------------------------------------
+
+            status.write(
+                "📖 Reader Agent is analyzing relevant resources..."
+            )
+
+            progress.progress(35)
+
+
+            # -----------------------------------------
+            # STEP 3
+            # -----------------------------------------
+
+            status.write(
+                "✍️ Writer Agent is preparing the research report..."
+            )
+
+            progress.progress(65)
+
+
+            # -----------------------------------------
+            # STEP 4
+            # -----------------------------------------
+
+            status.write(
+                "🧐 Critic Agent is reviewing the generated report..."
+            )
+
+            progress.progress(85)
+
+
+            # -----------------------------------------
+            # ACTUAL PIPELINE
+            # -----------------------------------------
+
             result = run_research_pipeline(topic)
+
+
+            # -----------------------------------------
+            # COMPLETE
+            # -----------------------------------------
 
             progress.progress(100)
 
@@ -284,19 +411,24 @@ if st.button("🚀 Start AI Research", type="primary"):
                 expanded=False
             )
 
+
+            # Save result
             st.session_state["research_result"] = result
 
-            st.success("🎉 Your research report is ready!")
+            st.success(
+                "🎉 Your multi-agent research report is ready!"
+            )
+
 
         except Exception as e:
 
             status.update(
-                label="❌ Research failed",
+                label="❌ Research pipeline failed",
                 state="error",
                 expanded=True
             )
 
-            st.error(f"Error: {e}")
+            st.error(f"Error: {str(e)}")
 
 
 # =========================================================
@@ -314,13 +446,36 @@ if "research_result" in st.session_state:
         unsafe_allow_html=True
     )
 
-    # Get results
-    search_data = result.get("search_results", "")
-    scraped_data = result.get("scraped_content", "")
-    report = result.get("report", "")
-    feedback = result.get("feedback", "")
 
-    # LangChain AIMessage handling
+    # =====================================================
+    # GET RESULTS
+    # =====================================================
+
+    search_data = result.get(
+        "search_results",
+        ""
+    )
+
+    scraped_data = result.get(
+        "scraped_content",
+        ""
+    )
+
+    report = result.get(
+        "report",
+        ""
+    )
+
+    feedback = result.get(
+        "feedback",
+        ""
+    )
+
+
+    # =====================================================
+    # HANDLE LANGCHAIN AIMESSAGE
+    # =====================================================
+
     if hasattr(search_data, "content"):
         search_data = search_data.content
 
@@ -340,17 +495,37 @@ if "research_result" in st.session_state:
 
     m1, m2, m3, m4 = st.columns(4)
 
+
     with m1:
-        st.metric("🤖 AI Agents", "4")
+
+        st.metric(
+            "🤖 AI Agents",
+            "4"
+        )
+
 
     with m2:
-        st.metric("🔎 Search", "Completed")
+
+        st.metric(
+            "🔎 Search",
+            "Completed"
+        )
+
 
     with m3:
-        st.metric("📝 Report", "Generated")
+
+        st.metric(
+            "📝 Report",
+            "Generated"
+        )
+
 
     with m4:
-        st.metric("🧐 Review", "Completed")
+
+        st.metric(
+            "🧐 Review",
+            "Completed"
+        )
 
 
     st.write("")
@@ -369,17 +544,22 @@ if "research_result" in st.session_state:
 
 
     # =====================================================
-    # REPORT
+    # FINAL REPORT
     # =====================================================
 
     with tab1:
 
-        st.subheader("📝 AI Generated Research Report")
+        st.subheader(
+            "📝 AI Generated Research Report"
+        )
 
-        st.markdown(report)
+        st.markdown(
+            str(report)
+        )
+
 
         st.download_button(
-            "⬇️ Download Report",
+            label="⬇️ Download Research Report",
             data=str(report),
             file_name="research_report.txt",
             mime="text/plain"
@@ -387,25 +567,33 @@ if "research_result" in st.session_state:
 
 
     # =====================================================
-    # CRITIC
+    # CRITIC REVIEW
     # =====================================================
 
     with tab2:
 
-        st.subheader("🧐 Critic Agent Feedback")
+        st.subheader(
+            "🧐 Critic Agent Feedback"
+        )
 
-        st.markdown(feedback)
+        st.markdown(
+            str(feedback)
+        )
 
 
     # =====================================================
-    # SEARCH
+    # SEARCH RESULTS
     # =====================================================
 
     with tab3:
 
-        st.subheader("🔎 Search Agent Output")
+        st.subheader(
+            "🔎 Search Agent Output"
+        )
 
-        st.write(search_data)
+        st.write(
+            search_data
+        )
 
 
     # =====================================================
@@ -414,9 +602,13 @@ if "research_result" in st.session_state:
 
     with tab4:
 
-        st.subheader("📖 Reader Agent Output")
+        st.subheader(
+            "📖 Reader Agent Output"
+        )
 
-        st.write(scraped_data)
+        st.write(
+            scraped_data
+        )
 
 
 # =========================================================
@@ -426,5 +618,5 @@ if "research_result" in st.session_state:
 st.divider()
 
 st.caption(
-    "ResearchMind AI • Search → Read → Write → Critique"
+    "MULTI AI RESEARCH SYSTEM • Search → Read → Write → Critique"
 )
