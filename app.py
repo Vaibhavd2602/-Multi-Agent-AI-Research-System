@@ -12,11 +12,8 @@ step-by-step visual layer on top of it (progress per agent, live status,
 tabs, downloadable report, etc.) instead of only printing to stdout.
 """
 
-import time
 from datetime import datetime
-
 import streamlit as st
-
 from agents import build_reader_agent, build_search_agent, writer_chain, critic_chain
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -36,11 +33,9 @@ st.markdown(
     """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
         html, body, [class*="css"]  {
             font-family: 'Inter', sans-serif;
         }
-
         .main {
             background: radial-gradient(circle at top left, #12141c 0%, #0b0c10 60%);
         }
@@ -67,28 +62,14 @@ st.markdown(
             margin-bottom: 0;
         }
 
-        /* Section cards */
-        .card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px;
-            padding: 1.4rem 1.6rem;
-            margin-bottom: 1.1rem;
-        }
-
-        .card h3 {
-            margin-top: 0;
-            font-weight: 700;
-            font-size: 1.05rem;
-        }
-
+        /* Agent badges */
         .agent-badge {
             display: inline-block;
             padding: 0.25rem 0.7rem;
             border-radius: 999px;
             font-size: 0.78rem;
             font-weight: 600;
-            margin-bottom: 0.6rem;
+            margin-bottom: 0.8rem;
             letter-spacing: 0.3px;
         }
         .badge-search { background: rgba(99,102,241,0.18); color: #a5b4fc; }
@@ -148,7 +129,6 @@ if "running" not in st.session_state:
 with st.sidebar:
     st.markdown("## 🧠 Research System")
     st.caption("Multi-agent pipeline: Search → Read → Write → Critique")
-
     st.markdown("---")
     st.markdown("### 🔧 Pipeline Stages")
     st.markdown(
@@ -159,7 +139,6 @@ with st.sidebar:
         4. **Critic Chain** — reviews & gives feedback
         """
     )
-
     st.markdown("---")
     st.markdown("### 🕘 Recent Topics")
     if st.session_state.history:
@@ -167,7 +146,6 @@ with st.sidebar:
             st.markdown(f"- {h}")
     else:
         st.caption("No research run yet.")
-
     st.markdown("---")
     st.caption("Built on your existing `pipeline.py` — core agent logic is untouched.")
 
@@ -205,9 +183,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ──────────────────────────────────────────────────────────────────────────
 def run_pipeline_with_ui(topic: str) -> dict:
     state = {}
-
     with st.status("Running multi-agent pipeline...", expanded=True) as status:
-
         # Step 1 — Search agent
         st.write("🔎 **Search Agent** is looking for recent, reliable sources...")
         search_agent = build_search_agent()
@@ -283,18 +259,23 @@ def as_text(x) -> str:
 
 if st.session_state.result_state:
     state = st.session_state.result_state
-
     st.markdown("## 📊 Results")
 
     tab_report, tab_feedback, tab_search, tab_scraped = st.tabs(
         ["📝 Final Report", "🧐 Critic Feedback", "🔎 Search Results", "📖 Scraped Content"]
     )
 
+    # NOTE: st.container(border=True) is used instead of manually opening/closing
+    # a <div> across multiple st.markdown() calls. Each st.markdown() call gets
+    # wrapped in its own isolated block by Streamlit, so a hand-written <div> that
+    # opens in one call and closes in another never actually wraps the content in
+    # between — it just auto-closes early, leaving the badge stuck in a tiny box
+    # and the rest of the content unstyled below it. st.container(border=True)
+    # avoids that entirely.
     with tab_report:
-        st.markdown('<div class="card"><span class="agent-badge badge-writer">WRITER CHAIN</span>', unsafe_allow_html=True)
-        st.markdown(as_text(state.get("report", "")))
-        st.markdown("</div>", unsafe_allow_html=True)
-
+        with st.container(border=True):
+            st.markdown('<span class="agent-badge badge-writer">WRITER CHAIN</span>', unsafe_allow_html=True)
+            st.markdown(as_text(state.get("report", "")))
         report_text = as_text(state.get("report", ""))
         st.download_button(
             "⬇️ Download Report (.md)",
@@ -304,20 +285,19 @@ if st.session_state.result_state:
         )
 
     with tab_feedback:
-        st.markdown('<div class="card"><span class="agent-badge badge-critic">CRITIC CHAIN</span>', unsafe_allow_html=True)
-        st.markdown(as_text(state.get("feedback", "")))
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<span class="agent-badge badge-critic">CRITIC CHAIN</span>', unsafe_allow_html=True)
+            st.markdown(as_text(state.get("feedback", "")))
 
     with tab_search:
-        st.markdown('<div class="card"><span class="agent-badge badge-search">SEARCH AGENT</span>', unsafe_allow_html=True)
-        st.markdown(as_text(state.get("search_results", "")))
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<span class="agent-badge badge-search">SEARCH AGENT</span>', unsafe_allow_html=True)
+            st.markdown(as_text(state.get("search_results", "")))
 
     with tab_scraped:
-        st.markdown('<div class="card"><span class="agent-badge badge-reader">READER AGENT</span>', unsafe_allow_html=True)
-        st.markdown(as_text(state.get("scraped_content", "")))
-        st.markdown("</div>", unsafe_allow_html=True)
-
+        with st.container(border=True):
+            st.markdown('<span class="agent-badge badge-reader">READER AGENT</span>', unsafe_allow_html=True)
+            st.markdown(as_text(state.get("scraped_content", "")))
 else:
     st.info("👆 Enter a topic above and click **Start Research** to run the pipeline.")
 
