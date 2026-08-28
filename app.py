@@ -2,186 +2,198 @@ import streamlit as st
 from pipeline import run_research_pipeline
 from agents import build_search_agent, build_reader_agent, writer_chain, critic_chain
 
-# 1. Page Config
+# Page Configuration
 st.set_page_config(
-    page_title="ResearchAI | Autonomous Multi-Agent Suite",
-    page_icon="⚡",
+    page_title="Multi-Agent Research System",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. Premium Custom CSS (Dark Glassmorphism Theme)
+# Vibrant & Colorful Custom CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
     
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Poppins', sans-serif;
     }
     
-    /* Global App Styling */
+    /* Main Background */
     .stApp {
-        background: #090d16;
+        background: #0d0f18;
     }
     
-    /* Hero Banner */
-    .hero-container {
-        background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
+    /* Dynamic Colorful Header Banner */
+    .banner {
+        background: linear-gradient(135deg, #FF007A 0%, #7B2CBF 50%, #00F5D4 100%);
+        border-radius: 20px;
         padding: 2.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        backdrop-filter: blur(10px);
-    }
-    
-    .hero-title {
-        font-size: 2.8rem;
-        font-weight: 700;
-        background: linear-gradient(90deg, #60A5FA, #A78BFA, #F472B6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
-    }
-    
-    .hero-subtitle {
-        color: #9CA3AF;
-        font-size: 1.1rem;
-        margin-bottom: 0;
-    }
-
-    /* Agent Status Cards */
-    .status-card {
-        background: rgba(17, 24, 39, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        padding: 1.2rem;
+        color: white;
         text-align: center;
-        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(255, 0, 122, 0.3);
+        margin-bottom: 2rem;
     }
-    
-    .status-card-active {
-        border: 1px solid #60A5FA;
-        box-shadow: 0 0 15px rgba(96, 165, 250, 0.2);
+    .banner h1 {
+        font-size: 2.8rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.4);
     }
-    
-    .status-card-done {
-        border: 1px solid #34D399;
-        box-shadow: 0 0 15px rgba(52, 211, 153, 0.15);
-    }
-
-    .status-title {
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: #9CA3AF;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .status-value {
+    .banner p {
         font-size: 1.1rem;
-        font-weight: 700;
-        margin-top: 0.4rem;
+        font-weight: 500;
+        opacity: 0.95;
     }
 
-    /* Tab Styling */
+    /* Distinct Vibrant Agent Cards */
+    .agent-card-search {
+        background: linear-gradient(135deg, rgba(0, 180, 216, 0.15) 0%, rgba(3, 4, 94, 0.3) 100%);
+        border: 2px solid #00B4D8;
+        border-radius: 15px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 180, 216, 0.2);
+    }
+    
+    .agent-card-reader {
+        background: linear-gradient(135deg, rgba(157, 78, 221, 0.15) 0%, rgba(60, 9, 108, 0.3) 100%);
+        border: 2px solid #9D4EDD;
+        border-radius: 15px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(157, 78, 221, 0.2);
+    }
+
+    .agent-card-writer {
+        background: linear-gradient(135deg, rgba(255, 183, 3, 0.15) 0%, rgba(208, 0, 0, 0.3) 100%);
+        border: 2px solid #FFB703;
+        border-radius: 15px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(255, 183, 3, 0.2);
+    }
+
+    .agent-card-critic {
+        background: linear-gradient(135deg, rgba(0, 245, 212, 0.15) 0%, rgba(20, 110, 120, 0.3) 100%);
+        border: 2px solid #00F5D4;
+        border-radius: 15px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 245, 212, 0.2);
+    }
+
+    .card-title {
+        font-weight: 700;
+        font-size: 1rem;
+        text-transform: uppercase;
+        margin-bottom: 0.3rem;
+    }
+    
+    .status-text {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    /* Colorful Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
+        gap: 12px;
     }
 
     .stTabs [data-baseweb="tab"] {
-        background-color: rgba(31, 41, 55, 0.5);
-        border-radius: 8px;
-        padding: 8px 16px;
-        color: #9CA3AF;
+        background: #181c2b;
+        border-radius: 10px;
+        color: #e0e0e0;
+        padding: 10px 20px;
+        font-weight: 600;
+        border: 1px solid rgba(255,255,255,0.1);
     }
 
     .stTabs [aria-selected="true"] {
-        background-color: #2563EB !important;
+        background: linear-gradient(90deg, #FF007A, #7B2CBF) !important;
         color: white !important;
+        border: none !important;
+        box-shadow: 0 4px 12px rgba(255, 0, 122, 0.4);
+    }
+
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #121522;
+        border-right: 1px solid rgba(255,255,255,0.05);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Sidebar Controls
+# Sidebar
 with st.sidebar:
-    st.markdown("## ⚡ **Control Panel**")
+    st.markdown("## 🧠 **Research System**")
+    st.caption("Multi-agent pipeline: Search ➔ Read ➔ Write ➔ Critique")
     st.markdown("---")
     
-    st.markdown("### 🤖 **Active Agents**")
+    st.markdown("### 🔧 **Pipeline Stages**")
     st.markdown("""
-    * 🔍 **Search Agent:** Web Scraping
-    * 📖 **Reader Agent:** URL Extraction
-    * ✍️ **Writer Chain:** Report Draft
-    * 🧐 **Critic Chain:** Peer Review
-    """)
-    
-    st.markdown("---")
-    output_format = st.selectbox("Output Format", ["Markdown (.md)", "Text (.txt)"])
-    st.caption("v2.4 • Multi-Agent Autonomous Framework")
+    <span style="color:#00B4D8; font-weight:bold;">1. Search Agent</span> — Finds recent, reliable sources<br><br>
+    <span style="color:#9D4EDD; font-weight:bold;">2. Reader Agent</span> — Scrapes the best source in depth<br><br>
+    <span style="color:#FFB703; font-weight:bold;">3. Writer Chain</span> — Drafts the final report<br><br>
+    <span style="color:#00F5D4; font-weight:bold;">4. Critic Chain</span> — Reviews & gives feedback
+    """, unsafe_allow_html=True)
 
-# 4. Hero Section
+# Header Banner
 st.markdown("""
-<div class="hero-container">
-    <div class="hero-title">Autonomous AI Research Lab</div>
-    <div class="hero-subtitle">Multi-Agent System for Deep Information Gathering, Synthesis, and Peer Critique</div>
+<div class="banner">
+    <h1>🧠 Multi-Agent Research System</h1>
+    <p>Enter a topic and let the Search, Reader, Writer & Critic agents collaborate to produce a reviewed report.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# 5. User Input Form
-with st.container():
-    col_input, col_btn = st.columns([4, 1])
-    with col_input:
-        topic = st.text_input(
-            "Topic Input",
-            placeholder="Enter research target (e.g., Quantum Computing Trends, AI in Healthcare...)",
-            label_visibility="collapsed"
-        )
-    with col_btn:
-        start_button = st.button("🚀 Start Pipeline", use_container_width=True, type="primary")
+# Input Row
+col_input, col_btn = st.columns([4, 1])
+with col_input:
+    topic = st.text_input("Enter Topic", placeholder="e.g., impact of quantum computing on cryptography", label_visibility="collapsed")
+with col_btn:
+    start_btn = st.button("🚀 Start Research", type="primary", use_container_width=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-# 6. Pipeline Execution
-if start_button:
+# Main Execution Flow
+if start_btn:
     if not topic.strip():
-        st.warning("⚠️ Please enter a valid topic before running.")
+        st.warning("⚠️ Enter a research topic first.")
     else:
-        # Dashboard Cards Grid
-        c1, c2, c3, c4 = st.columns(4)
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        card1 = c1.empty()
-        card2 = c2.empty()
-        card3 = c3.empty()
-        card4 = c4.empty()
+        # 4 Dynamic Agent Cards Layout
+        col1, col2, col3, col4 = st.columns(4)
+        c1 = col1.empty()
+        c2 = col2.empty()
+        c3 = col3.empty()
+        c4 = col4.empty()
 
-        # Initial Idle Cards Display
-        card1.markdown("<div class='status-card'><div class='status-title'>1. Search</div><div class='status-value' style='color:#6B7280;'>Idle</div></div>", unsafe_allow_html=True)
-        card2.markdown("<div class='status-card'><div class='status-title'>2. Reader</div><div class='status-value' style='color:#6B7280;'>Idle</div></div>", unsafe_allow_html=True)
-        card3.markdown("<div class='status-card'><div class='status-title'>3. Writer</div><div class='status-value' style='color:#6B7280;'>Idle</div></div>", unsafe_allow_html=True)
-        card4.markdown("<div class='status-card'><div class='status-title'>4. Critic</div><div class='status-value' style='color:#6B7280;'>Idle</div></div>", unsafe_allow_html=True)
+        # Initial Card State
+        c1.markdown("<div class='agent-card-search'><div class='card-title' style='color:#00B4D8;'>1. Search</div><div class='status-text' style='color:#6c757d;'>⏳ Idle</div></div>", unsafe_allow_html=True)
+        c2.markdown("<div class='agent-card-reader'><div class='card-title' style='color:#9D4EDD;'>2. Reader</div><div class='status-text' style='color:#6c757d;'>⏳ Idle</div></div>", unsafe_allow_html=True)
+        c3.markdown("<div class='agent-card-writer'><div class='card-title' style='color:#FFB703;'>3. Writer</div><div class='status-text' style='color:#6c757d;'>⏳ Idle</div></div>", unsafe_allow_html=True)
+        c4.markdown("<div class='agent-card-critic'><div class='card-title' style='color:#00F5D4;'>4. Critic</div><div class='status-text' style='color:#6c757d;'>⏳ Idle</div></div>", unsafe_allow_html=True)
 
         progress_bar = st.progress(0)
-        status_msg = st.empty()
+        status_box = st.empty()
         state = {}
 
         try:
-            # Step 1: Search Agent
-            card1.markdown("<div class='status-card status-card-active'><div class='status-title'>1. Search</div><div class='status-value' style='color:#60A5FA;'>Running...</div></div>", unsafe_allow_html=True)
-            status_msg.info("🔍 **Search Agent:** Gathering recent web data and top sources...")
-            progress_bar.progress(20)
+            # 1. Search Agent
+            c1.markdown("<div class='agent-card-search'><div class='card-title' style='color:#00B4D8;'>1. Search</div><div class='status-text' style='color:#00B4D8;'>🔎 Working...</div></div>", unsafe_allow_html=True)
+            status_box.info("🔎 **Search Agent** is finding recent, reliable sources...")
+            progress_bar.progress(25)
 
             search_agent = build_search_agent()
             search_result = search_agent.invoke({
                 "messages": [("user", f"Find recent, reliable and detailed information about: {topic}")]
             })
             state["search_results"] = search_result['messages'][-1].content
-            card1.markdown("<div class='status-card status-card-done'><div class='status-title'>1. Search</div><div class='status-value' style='color:#34D399;'>Completed</div></div>", unsafe_allow_html=True)
+            c1.markdown("<div class='agent-card-search'><div class='card-title' style='color:#00B4D8;'>1. Search</div><div class='status-text' style='color:#00F5D4;'>✅ Complete</div></div>", unsafe_allow_html=True)
 
-            # Step 2: Reader Agent
-            card2.markdown("<div class='status-card status-card-active'><div class='status-title'>2. Reader</div><div class='status-value' style='color:#60A5FA;'>Running...</div></div>", unsafe_allow_html=True)
-            status_msg.info("📖 **Reader Agent:** Scraping deep details from selected URLs...")
-            progress_bar.progress(45)
+            # 2. Reader Agent
+            c2.markdown("<div class='agent-card-reader'><div class='card-title' style='color:#9D4EDD;'>2. Reader</div><div class='status-text' style='color:#9D4EDD;'>📖 Scraping...</div></div>", unsafe_allow_html=True)
+            status_box.info("📖 **Reader Agent** is scraping top content from web sources...")
+            progress_bar.progress(50)
 
             reader_agent = build_reader_agent()
             reader_result = reader_agent.invoke({
@@ -192,12 +204,12 @@ if start_button:
                 )]
             })
             state['scraped_content'] = reader_result['messages'][-1].content
-            card2.markdown("<div class='status-card status-card-done'><div class='status-title'>2. Reader</div><div class='status-value' style='color:#34D399;'>Completed</div></div>", unsafe_allow_html=True)
+            c2.markdown("<div class='agent-card-reader'><div class='card-title' style='color:#9D4EDD;'>2. Reader</div><div class='status-text' style='color:#00F5D4;'>✅ Complete</div></div>", unsafe_allow_html=True)
 
-            # Step 3: Writer Chain
-            card3.markdown("<div class='status-card status-card-active'><div class='status-title'>3. Writer</div><div class='status-value' style='color:#60A5FA;'>Running...</div></div>", unsafe_allow_html=True)
-            status_msg.info("✍️ **Writer Chain:** Synthesizing content and building draft...")
-            progress_bar.progress(70)
+            # 3. Writer Chain
+            c3.markdown("<div class='agent-card-writer'><div class='card-title' style='color:#FFB703;'>3. Writer</div><div class='status-text' style='color:#FFB703;'>✍️ Drafting...</div></div>", unsafe_allow_html=True)
+            status_box.info("✍️ **Writer Chain** is assembling information and drafting report...")
+            progress_bar.progress(75)
 
             research_combined = (
                 f"SEARCH RESULTS : \n {state['search_results']} \n\n"
@@ -207,55 +219,49 @@ if start_button:
                 "topic": topic,
                 "research": research_combined
             })
-            card3.markdown("<div class='status-card status-card-done'><div class='status-title'>3. Writer</div><div class='status-value' style='color:#34D399;'>Completed</div></div>", unsafe_allow_html=True)
+            c3.markdown("<div class='agent-card-writer'><div class='card-title' style='color:#FFB703;'>3. Writer</div><div class='status-text' style='color:#00F5D4;'>✅ Complete</div></div>", unsafe_allow_html=True)
 
-            # Step 4: Critic Chain
-            card4.markdown("<div class='status-card status-card-active'><div class='status-title'>4. Critic</div><div class='status-value' style='color:#60A5FA;'>Running...</div></div>", unsafe_allow_html=True)
-            status_msg.info("🧐 **Critic Chain:** Evaluating draft and generating feedback...")
+            # 4. Critic Chain
+            c4.markdown("<div class='agent-card-critic'><div class='card-title' style='color:#00F5D4;'>4. Critic</div><div class='status-text' style='color:#00F5D4;'>🧐 Reviewing...</div></div>", unsafe_allow_html=True)
+            status_box.info("🧐 **Critic Chain** is analyzing report for review & feedback...")
             progress_bar.progress(90)
 
             state["feedback"] = critic_chain.invoke({
                 "topic": topic,
                 "report": state['report']
             })
-            card4.markdown("<div class='status-card status-card-done'><div class='status-title'>4. Critic</div><div class='status-value' style='color:#34D399;'>Completed</div></div>", unsafe_allow_html=True)
+            c4.markdown("<div class='agent-card-critic'><div class='card-title' style='color:#00F5D4;'>4. Critic</div><div class='status-text' style='color:#00F5D4;'>✅ Complete</div></div>", unsafe_allow_html=True)
 
             progress_bar.progress(100)
-            status_msg.success("✨ **Pipeline Execution Finished Successfully!**")
+            status_box.success("🎉 **All agents finished their workflow successfully!**")
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # 7. Output Presentation
-            tab_report, tab_critic, tab_search, tab_scraped = st.tabs([
-                "📄 Final Report", 
-                "🧐 Peer Critique", 
+            # Color Output Tabs
+            t1, t2, t3, t4 = st.tabs([
+                "📄 Draft Report", 
+                "🧐 Critic Review", 
                 "🔍 Search Results", 
-                "📑 Raw Scraped Data"
+                "📑 Scraped Content"
             ])
 
-            with tab_report:
+            with t1:
                 st.markdown(state["report"])
-                
-                ext = ".md" if "Markdown" in output_format else ".txt"
                 st.download_button(
-                    label="📥 Download Generated Report",
+                    label="📥 Download Report (.md)",
                     data=str(state["report"]),
-                    file_name=f"{topic.lower().replace(' ', '_')}_report{ext}",
-                    mime="text/plain",
-                    type="primary"
+                    file_name=f"{topic.replace(' ', '_')}_report.md",
+                    mime="text/markdown"
                 )
 
-            with tab_critic:
-                st.markdown("### Agent Evaluation")
+            with t2:
                 st.markdown(state["feedback"])
 
-            with tab_search:
-                st.markdown("### Search Data")
-                st.code(state["search_results"], language="markdown")
+            with t3:
+                st.code(state["search_results"], language="text")
 
-            with tab_scraped:
-                st.markdown("### Extracted Page Content")
-                st.code(state["scraped_content"], language="markdown")
+            with t4:
+                st.code(state["scraped_content"], language="text")
 
-        except Exception as e:
-            st.error(f"Execution Error: {str(e)}")
+        except Exception as err:
+            st.error(f"Execution Error: {err}")
