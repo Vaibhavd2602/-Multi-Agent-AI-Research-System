@@ -10,121 +10,104 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Vibrant & Colorful Custom CSS
+# Initialize Session State for Recent Topics
+if "recent_topics" not in st.session_state:
+    st.session_state.recent_topics = []
+
+if "search_topic" not in st.session_state:
+    st.session_state.search_topic = ""
+
+# Subdued, Elegant & Balanced Dark Theme CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     html, body, [class*="css"] {
-        font-family: 'Poppins', sans-serif;
+        font-family: 'Inter', sans-serif;
     }
     
     /* Main Background */
     .stApp {
-        background: #0d0f18;
+        background-color: #0e1117;
+        color: #c9d1d9;
     }
     
-    /* Dynamic Colorful Header Banner */
+    /* Soft Subdued Header Banner */
     .banner {
-        background: linear-gradient(135deg, #FF007A 0%, #7B2CBF 50%, #00F5D4 100%);
-        border-radius: 20px;
-        padding: 2.5rem;
-        color: white;
+        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        border: 1px solid #374151;
+        border-radius: 12px;
+        padding: 2rem;
         text-align: center;
-        box-shadow: 0 10px 30px rgba(255, 0, 122, 0.3);
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
     }
     .banner h1 {
-        font-size: 2.8rem;
-        font-weight: 800;
-        margin-bottom: 0.5rem;
-        text-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+        color: #f3f4f6;
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 0.4rem;
     }
     .banner p {
-        font-size: 1.1rem;
-        font-weight: 500;
-        opacity: 0.95;
+        color: #9ca3af;
+        font-size: 1rem;
+        margin: 0;
     }
 
-    /* Distinct Vibrant Agent Cards */
-    .agent-card-search {
-        background: linear-gradient(135deg, rgba(0, 180, 216, 0.15) 0%, rgba(3, 4, 94, 0.3) 100%);
-        border: 2px solid #00B4D8;
-        border-radius: 15px;
+    /* Muted Status Cards */
+    .agent-card {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 10px;
         padding: 1rem;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(0, 180, 216, 0.2);
-    }
-    
-    .agent-card-reader {
-        background: linear-gradient(135deg, rgba(157, 78, 221, 0.15) 0%, rgba(60, 9, 108, 0.3) 100%);
-        border: 2px solid #9D4EDD;
-        border-radius: 15px;
-        padding: 1rem;
-        text-align: center;
-        box-shadow: 0 4px 15px rgba(157, 78, 221, 0.2);
-    }
-
-    .agent-card-writer {
-        background: linear-gradient(135deg, rgba(255, 183, 3, 0.15) 0%, rgba(208, 0, 0, 0.3) 100%);
-        border: 2px solid #FFB703;
-        border-radius: 15px;
-        padding: 1rem;
-        text-align: center;
-        box-shadow: 0 4px 15px rgba(255, 183, 3, 0.2);
-    }
-
-    .agent-card-critic {
-        background: linear-gradient(135deg, rgba(0, 245, 212, 0.15) 0%, rgba(20, 110, 120, 0.3) 100%);
-        border: 2px solid #00F5D4;
-        border-radius: 15px;
-        padding: 1rem;
-        text-align: center;
-        box-shadow: 0 4px 15px rgba(0, 245, 212, 0.2);
     }
 
     .card-title {
-        font-weight: 700;
-        font-size: 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
         text-transform: uppercase;
+        letter-spacing: 0.05em;
         margin-bottom: 0.3rem;
     }
     
     .status-text {
-        font-weight: 600;
-        font-size: 0.95rem;
+        font-weight: 500;
+        font-size: 0.9rem;
     }
 
-    /* Colorful Tabs */
+    /* Clean Styled Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 12px;
+        gap: 8px;
     }
 
     .stTabs [data-baseweb="tab"] {
-        background: #181c2b;
-        border-radius: 10px;
-        color: #e0e0e0;
-        padding: 10px 20px;
-        font-weight: 600;
-        border: 1px solid rgba(255,255,255,0.1);
+        background-color: #161b22;
+        border-radius: 8px;
+        color: #9ca3af;
+        padding: 8px 16px;
+        font-weight: 500;
+        border: 1px solid #30363d;
     }
 
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(90deg, #FF007A, #7B2CBF) !important;
-        color: white !important;
-        border: none !important;
-        box-shadow: 0 4px 12px rgba(255, 0, 122, 0.4);
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border-color: #2563eb !important;
     }
 
     /* Sidebar Styling */
     [data-testid="stSidebar"] {
-        background-color: #121522;
-        border-right: 1px solid rgba(255,255,255,0.05);
+        background-color: #161b22;
+        border-right: 1px solid #30363d;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar
+# Function to handle search click from Recent Searches
+def select_topic(topic_name):
+    st.session_state.search_topic = topic_name
+
+# Sidebar Setup
 with st.sidebar:
     st.markdown("## 🧠 **Research System**")
     st.caption("Multi-agent pipeline: Search ➔ Read ➔ Write ➔ Critique")
@@ -132,13 +115,22 @@ with st.sidebar:
     
     st.markdown("### 🔧 **Pipeline Stages**")
     st.markdown("""
-    <span style="color:#00B4D8; font-weight:bold;">1. Search Agent</span> — Finds recent, reliable sources<br><br>
-    <span style="color:#9D4EDD; font-weight:bold;">2. Reader Agent</span> — Scrapes the best source in depth<br><br>
-    <span style="color:#FFB703; font-weight:bold;">3. Writer Chain</span> — Drafts the final report<br><br>
-    <span style="color:#00F5D4; font-weight:bold;">4. Critic Chain</span> — Reviews & gives feedback
+    <span style="color:#60a5fa; font-weight:600;">1. Search Agent</span> — Finds recent, reliable sources<br><br>
+    <span style="color:#c084fc; font-weight:600;">2. Reader Agent</span> — Scrapes the best source in depth<br><br>
+    <span style="color:#facc15; font-weight:600;">3. Writer Chain</span> — Drafts the final report<br><br>
+    <span style="color:#34d399; font-weight:600;">4. Critic Chain</span> — Reviews & gives feedback
     """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown("### 🕒 **Recent Searches**")
+    
+    if st.session_state.recent_topics:
+        for past_topic in reversed(st.session_state.recent_topics[-5:]):  # Shows last 5
+            st.button(f"🔍 {past_topic}", key=f"recent_{past_topic}", on_click=select_topic, args=(past_topic,), use_container_width=True)
+    else:
+        st.caption("No recent searches yet.")
 
-# Header Banner
+# Main Header Banner
 st.markdown("""
 <div class="banner">
     <h1>🧠 Multi-Agent Research System</h1>
@@ -149,29 +141,35 @@ st.markdown("""
 # Input Row
 col_input, col_btn = st.columns([4, 1])
 with col_input:
-    topic = st.text_input("Enter Topic", placeholder="e.g., impact of quantum computing on cryptography", label_visibility="collapsed")
+    topic_input = st.text_input(
+        "Enter Topic", 
+        value=st.session_state.search_topic,
+        placeholder="e.g., impact of quantum computing on cryptography", 
+        label_visibility="collapsed"
+    )
 with col_btn:
     start_btn = st.button("🚀 Start Research", type="primary", use_container_width=True)
 
 # Main Execution Flow
 if start_btn:
-    if not topic.strip():
+    if not topic_input.strip():
         st.warning("⚠️ Enter a research topic first.")
     else:
+        # Save to Recent Searches list
+        if topic_input not in st.session_state.recent_topics:
+            st.session_state.recent_topics.append(topic_input)
+
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # 4 Dynamic Agent Cards Layout
+        # 4 Dynamic Agent Status Cards Layout
         col1, col2, col3, col4 = st.columns(4)
-        c1 = col1.empty()
-        c2 = col2.empty()
-        c3 = col3.empty()
-        c4 = col4.empty()
+        c1, c2, c3, c4 = col1.empty(), col2.empty(), col3.empty(), col4.empty()
 
-        # Initial Card State
-        c1.markdown("<div class='agent-card-search'><div class='card-title' style='color:#00B4D8;'>1. Search</div><div class='status-text' style='color:#6c757d;'>⏳ Idle</div></div>", unsafe_allow_html=True)
-        c2.markdown("<div class='agent-card-reader'><div class='card-title' style='color:#9D4EDD;'>2. Reader</div><div class='status-text' style='color:#6c757d;'>⏳ Idle</div></div>", unsafe_allow_html=True)
-        c3.markdown("<div class='agent-card-writer'><div class='card-title' style='color:#FFB703;'>3. Writer</div><div class='status-text' style='color:#6c757d;'>⏳ Idle</div></div>", unsafe_allow_html=True)
-        c4.markdown("<div class='agent-card-critic'><div class='card-title' style='color:#00F5D4;'>4. Critic</div><div class='status-text' style='color:#6c757d;'>⏳ Idle</div></div>", unsafe_allow_html=True)
+        # Initial Card States (Muted Dark Colors)
+        c1.markdown("<div class='agent-card'><div class='card-title' style='color:#60a5fa;'>1. Search</div><div class='status-text' style='color:#6b7280;'>⏳ Idle</div></div>", unsafe_allow_html=True)
+        c2.markdown("<div class='agent-card'><div class='card-title' style='color:#c084fc;'>2. Reader</div><div class='status-text' style='color:#6b7280;'>⏳ Idle</div></div>", unsafe_allow_html=True)
+        c3.markdown("<div class='agent-card'><div class='card-title' style='color:#facc15;'>3. Writer</div><div class='status-text' style='color:#6b7280;'>⏳ Idle</div></div>", unsafe_allow_html=True)
+        c4.markdown("<div class='agent-card'><div class='card-title' style='color:#34d399;'>4. Critic</div><div class='status-text' style='color:#6b7280;'>⏳ Idle</div></div>", unsafe_allow_html=True)
 
         progress_bar = st.progress(0)
         status_box = st.empty()
@@ -179,35 +177,35 @@ if start_btn:
 
         try:
             # 1. Search Agent
-            c1.markdown("<div class='agent-card-search'><div class='card-title' style='color:#00B4D8;'>1. Search</div><div class='status-text' style='color:#00B4D8;'>🔎 Working...</div></div>", unsafe_allow_html=True)
+            c1.markdown("<div class='agent-card' style='border-color:#60a5fa;'><div class='card-title' style='color:#60a5fa;'>1. Search</div><div class='status-text' style='color:#60a5fa;'>🔎 Working...</div></div>", unsafe_allow_html=True)
             status_box.info("🔎 **Search Agent** is finding recent, reliable sources...")
             progress_bar.progress(25)
 
             search_agent = build_search_agent()
             search_result = search_agent.invoke({
-                "messages": [("user", f"Find recent, reliable and detailed information about: {topic}")]
+                "messages": [("user", f"Find recent, reliable and detailed information about: {topic_input}")]
             })
             state["search_results"] = search_result['messages'][-1].content
-            c1.markdown("<div class='agent-card-search'><div class='card-title' style='color:#00B4D8;'>1. Search</div><div class='status-text' style='color:#00F5D4;'>✅ Complete</div></div>", unsafe_allow_html=True)
+            c1.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#60a5fa;'>1. Search</div><div class='status-text' style='color:#34d399;'>✅ Complete</div></div>", unsafe_allow_html=True)
 
             # 2. Reader Agent
-            c2.markdown("<div class='agent-card-reader'><div class='card-title' style='color:#9D4EDD;'>2. Reader</div><div class='status-text' style='color:#9D4EDD;'>📖 Scraping...</div></div>", unsafe_allow_html=True)
+            c2.markdown("<div class='agent-card' style='border-color:#c084fc;'><div class='card-title' style='color:#c084fc;'>2. Reader</div><div class='status-text' style='color:#c084fc;'>📖 Scraping...</div></div>", unsafe_allow_html=True)
             status_box.info("📖 **Reader Agent** is scraping top content from web sources...")
             progress_bar.progress(50)
 
             reader_agent = build_reader_agent()
             reader_result = reader_agent.invoke({
                 "messages": [("user",
-                    f"Based on the following search results about '{topic}', "
+                    f"Based on the following search results about '{topic_input}', "
                     f"pick the most relevant URL and scrape it for deeper content.\n\n"
                     f"Search Results:\n{state['search_results'][:800]}"
                 )]
             })
             state['scraped_content'] = reader_result['messages'][-1].content
-            c2.markdown("<div class='agent-card-reader'><div class='card-title' style='color:#9D4EDD;'>2. Reader</div><div class='status-text' style='color:#00F5D4;'>✅ Complete</div></div>", unsafe_allow_html=True)
+            c2.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#c084fc;'>2. Reader</div><div class='status-text' style='color:#34d399;'>✅ Complete</div></div>", unsafe_allow_html=True)
 
             # 3. Writer Chain
-            c3.markdown("<div class='agent-card-writer'><div class='card-title' style='color:#FFB703;'>3. Writer</div><div class='status-text' style='color:#FFB703;'>✍️ Drafting...</div></div>", unsafe_allow_html=True)
+            c3.markdown("<div class='agent-card' style='border-color:#facc15;'><div class='card-title' style='color:#facc15;'>3. Writer</div><div class='status-text' style='color:#facc15;'>✍️ Drafting...</div></div>", unsafe_allow_html=True)
             status_box.info("✍️ **Writer Chain** is assembling information and drafting report...")
             progress_bar.progress(75)
 
@@ -216,28 +214,28 @@ if start_btn:
                 f"DETAILED SCRAPED CONTENT : \n {state['scraped_content']}"
             )
             state["report"] = writer_chain.invoke({
-                "topic": topic,
+                "topic": topic_input,
                 "research": research_combined
             })
-            c3.markdown("<div class='agent-card-writer'><div class='card-title' style='color:#FFB703;'>3. Writer</div><div class='status-text' style='color:#00F5D4;'>✅ Complete</div></div>", unsafe_allow_html=True)
+            c3.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#facc15;'>3. Writer</div><div class='status-text' style='color:#34d399;'>✅ Complete</div></div>", unsafe_allow_html=True)
 
             # 4. Critic Chain
-            c4.markdown("<div class='agent-card-critic'><div class='card-title' style='color:#00F5D4;'>4. Critic</div><div class='status-text' style='color:#00F5D4;'>🧐 Reviewing...</div></div>", unsafe_allow_html=True)
+            c4.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#34d399;'>4. Critic</div><div class='status-text' style='color:#34d399;'>🧐 Reviewing...</div></div>", unsafe_allow_html=True)
             status_box.info("🧐 **Critic Chain** is analyzing report for review & feedback...")
             progress_bar.progress(90)
 
             state["feedback"] = critic_chain.invoke({
-                "topic": topic,
+                "topic": topic_input,
                 "report": state['report']
             })
-            c4.markdown("<div class='agent-card-critic'><div class='card-title' style='color:#00F5D4;'>4. Critic</div><div class='status-text' style='color:#00F5D4;'>✅ Complete</div></div>", unsafe_allow_html=True)
+            c4.markdown("<div class='agent-card' style='border-color:#34d399;'><div class='card-title' style='color:#34d399;'>4. Critic</div><div class='status-text' style='color:#34d399;'>✅ Complete</div></div>", unsafe_allow_html=True)
 
             progress_bar.progress(100)
-            status_box.success("🎉 **All agents finished their workflow successfully!**")
+            status_box.success("🎉 **Research pipeline execution finished!**")
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # Color Output Tabs
+            # Output Tabs
             t1, t2, t3, t4 = st.tabs([
                 "📄 Draft Report", 
                 "🧐 Critic Review", 
@@ -250,7 +248,7 @@ if start_btn:
                 st.download_button(
                     label="📥 Download Report (.md)",
                     data=str(state["report"]),
-                    file_name=f"{topic.replace(' ', '_')}_report.md",
+                    file_name=f"{topic_input.replace(' ', '_')}_report.md",
                     mime="text/markdown"
                 )
 
